@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import styles from './SystemStatusPanel.module.css';
 
 /**
@@ -11,66 +11,74 @@ import styles from './SystemStatusPanel.module.css';
 export default function SystemStatusPanel() {
   const [statuses, setStatuses] = useState({
     aiModel: { status: 'offline', label: 'AI 大模型', detail: 'openai / gpt-5.4' },
-    knowledgeBase: { status: 'online', label: '知识库', detail: '智谱知识库' },
-    crm: { status: 'warning', label: 'CRM系统', detail: '有赞（测试）' },
-    skillCenter: { status: 'online', label: 'Skill中心', detail: '樊文花Skill' },
+    knowledgeBase: { status: 'warning', label: '知识库', detail: '待配置' },
+    crm: { status: 'warning', label: 'CRM系统', detail: '等待联调' },
+    skillCenter: { status: 'online', label: 'Skill中心', detail: '内置 3 个标杆 Skill' },
   });
 
-  useEffect(() => {
-    checkStatuses();
+  const checkStatuses = useCallback(async () => {
+    try {
+      const [aiRes, readinessRes] = await Promise.all([
+        fetch('/api/settings/ai-model', { cache: 'no-store' }),
+        fetch('/api/integrations/readiness', { cache: 'no-store' }),
+      ]);
+
+      const aiData = aiRes.ok ? await aiRes.json() : null;
+      const readinessData = readinessRes.ok ? await readinessRes.json() : null;
+      const crmItem = readinessData?.items?.find((item) => item.channel === 'crm');
+      const readyCount = readinessData?.summary?.ready ?? 0;
+      const totalCount = readinessData?.summary?.total ?? 0;
+
+      setStatuses((prev) => ({
+        ...prev,
+        aiModel: {
+          ...prev.aiModel,
+          status: aiData?.enabled && aiData?.apiKeyMasked ? 'online' : 'offline',
+          detail: aiData?.enabled
+            ? `${aiData.provider || 'openai'} / ${aiData.modelName || '未命名模型'}`
+            : '未启用',
+        },
+        knowledgeBase: {
+          ...prev.knowledgeBase,
+          status: aiData?.kbSource && aiData.kbSource !== 'default' ? 'online' : 'warning',
+          detail: aiData?.kbSource && aiData.kbSource !== 'default'
+            ? `${aiData.kbSource}${aiData.kbId ? ` / ${aiData.kbId}` : ''}`
+            : '使用默认知识上下文',
+        },
+        crm: {
+          ...prev.crm,
+          status: crmItem?.status?.key === 'ready'
+            ? 'online'
+            : crmItem?.status?.key === 'partial'
+              ? 'warning'
+              : 'offline',
+          detail: crmItem
+            ? `${crmItem.status.label} / ${crmItem.name}`
+            : '未发现联调配置',
+        },
+        skillCenter: {
+          ...prev.skillCenter,
+          status: 'online',
+          detail: totalCount > 0 ? `联调通道 ${readyCount}/${totalCount} 已就绪` : prev.skillCenter.detail,
+        },
+      }));
+    } catch {
+      setStatuses((prev) => ({
+        ...prev,
+        aiModel: { ...prev.aiModel, status: 'offline', detail: '状态检查失败' },
+        knowledgeBase: { ...prev.knowledgeBase, status: 'warning', detail: '状态检查失败' },
+        crm: { ...prev.crm, status: 'warning', detail: '状态检查失败' },
+      }));
+    }
   }, []);
 
-  const checkStatuses = async () => {
-    // 检查 AI 模型状态
-    try {
-      const aiRes = await fetch('/api/settings/ai-model');
-      if (aiRes.ok) {
-        const aiData = await aiRes.json();
-        setStatuses(prev => ({
-          ...prev,
-          aiModel: {
-            ...prev.aiModel,
-            status: aiData.enabled && aiData.apiKey ? 'online' : 'offline',
-            detail: aiData.enabled
-              ? `${aiData.provider} / ${aiData.modelName}`
-              : '未启用',
-          },
-        }));
-      }
-    } catch (e) {
-      setStatuses(prev => ({
-        ...prev,
-        aiModel: { ...prev.aiModel, status: 'error', detail: '检查失败' },
-      }));
-    }
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void checkStatuses();
+    }, 0);
 
-    try {
-      const brandRes = await fetch('/api/brands/brand_default');
-      const brandData = await brandRes.json();
-      const skillRes = await fetch('/api/skills/recommend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandId: 'brand_default' }),
-      });
-      const skillData = await skillRes.json();
-
-      setStatuses(prev => ({
-        ...prev,
-        aiModel: { ...prev.aiModel, status: 'offline', detail: 'openai / gpt-5.4' },
-        knowledgeBase: { ...prev.knowledgeBase, status: 'online', detail: '智谱知识库' },
-        crm: { ...prev.crm, status: 'warning', detail: '有赞（测试）' },
-        skillCenter: { ...prev.skillCenter, status: 'online', detail: '樊文花Skill' },
-      }));
-    } catch (error) {
-      setStatuses(prev => ({
-        ...prev,
-        aiModel: { ...prev.aiModel, status: 'offline', detail: 'openai / gpt-5.4' },
-        knowledgeBase: { ...prev.knowledgeBase, status: 'online', detail: '智谱知识库' },
-        crm: { ...prev.crm, status: 'warning', detail: '有赞（测试）' },
-        skillCenter: { ...prev.skillCenter, status: 'online', detail: '樊文花Skill' },
-      }));
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [checkStatuses]);
 
   const getStatusColor = (status) => {
     switch (status) {

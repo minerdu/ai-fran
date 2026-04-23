@@ -54,20 +54,11 @@ const SECTION_ICONS = {
 export default function SkillCenterView() {
   const [selectedBrand, setSelectedBrand] = useState(BENCHMARK_BRANDS[0].id);
   const [selectedStage, setSelectedStage] = useState(FRANCHISE_STAGES[0].key);
-  const [expandedSection, setExpandedSection] = useState('rules');
 
   const brand = BENCHMARK_BRANDS.find(b => b.id === selectedBrand);
   const skills = BRAND_SKILL_MAP[selectedBrand] || {};
   const stageSkill = skills[selectedStage] || {};
   const stageMeta = FRANCHISE_STAGES.find(s => s.key === selectedStage);
-
-  const DETAIL_SECTIONS = [
-    { key: 'rules', label: '环节规则', icon: SECTION_ICONS.rules },
-    { key: 'scripts', label: '话术模板', icon: SECTION_ICONS.scripts },
-    { key: 'metrics', label: '关键数据', icon: SECTION_ICONS.metrics },
-    { key: 'objections', label: '异议处理', icon: SECTION_ICONS.objections },
-    { key: 'materials', label: '物料清单', icon: SECTION_ICONS.materials },
-  ];
 
   return (
     <>
@@ -211,7 +202,7 @@ export default function SkillCenterView() {
                 {stageSkill.scripts.map((script, i) => (
                   <div key={i} style={{ position: 'relative', padding: '16px 20px', background: '#ffffff', borderRadius: '0 16px 16px 16px', borderLeft: `4px solid #8b5cf6`, fontSize: '14.5px', color: '#1e293b', lineHeight: 1.6, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                     <div style={{ position: 'absolute', top: '-14px', left: '12px', background: '#ffffff', padding: '2px 10px', fontSize: '12px', color: '#6d28d9', fontWeight: 700, border: '1px solid #ede9fe', borderRadius: '8px' }}>话术 {i + 1}</div>
-                    "{script}"
+                    &ldquo;{script}&rdquo;
                   </div>
                 ))}
               </div>

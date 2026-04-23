@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@/components/common/Toast';
 import styles from './YouzanConfigPanel.module.css';
 
@@ -26,11 +26,7 @@ export default function WecomConfigPanel() {
   const [isSending, setIsSending] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
-
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     try {
       const res = await fetch('/api/wecom');
       if (!res.ok) return;
@@ -54,7 +50,11 @@ export default function WecomConfigPanel() {
     } catch (error) {
       toast.error('读取企业微信配置失败');
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    void loadConfig();
+  }, [loadConfig]);
 
   const saveConfig = async () => {
     setIsSaving(true);

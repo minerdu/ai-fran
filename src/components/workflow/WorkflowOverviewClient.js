@@ -54,13 +54,14 @@ function getMonthDays(baseDate) {
 }
 
 export default function WorkflowOverviewClient() {
-  const today = new Date();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('day');
   const [tasks, setTasks] = useState([]);
   const [activeFilter, setActiveFilter] = useState('全部'); // Add active filter state
 
   useEffect(() => {
+    const today = new Date();
+
     // Load real tasks from API (AI-created, journey engine, manual)
     const loadRealTasks = async () => {
       try {
@@ -249,7 +250,7 @@ export default function WorkflowOverviewClient() {
               {dayTasks.map(task => (
                 <div key={task.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: task.status === 'approved' ? '#f0fdf4' : '#fffbeb', borderRadius: 8, border: '1px solid', borderColor: task.status === 'approved' ? '#dcfce7' : '#fef3c7' }}>
                   <span style={{ width: 44, fontSize: 13, fontWeight: 500, color: '#374151' }}>{task.time}</span>
-                  <span style={{ fontSize: 18, marginRight: 12 }}>{task.icon === '🤖' ? <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Felix" width="22" style={{borderRadius: 4}} /> : '📋'}</span>
+                  <span style={{ fontSize: 18, marginRight: 12 }} aria-hidden="true">{task.icon}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                       <span style={{ 
@@ -348,5 +349,4 @@ export default function WorkflowOverviewClient() {
     </div>
   );
 }
-
 

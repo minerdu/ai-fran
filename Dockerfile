@@ -13,8 +13,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
-RUN npm ci --omit=dev
-RUN npx prisma generate
+RUN npm ci
 
 # ── Stage 2: 构建应用 ──
 FROM node:20-alpine AS builder
@@ -52,6 +51,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # 复制 Prisma 客户端（需要访问数据库）
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/prisma ./prisma
 
 USER nextjs
@@ -59,4 +59,4 @@ USER nextjs
 EXPOSE 3000
 
 # 启动命令
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]

@@ -1,0 +1,13 @@
+services:
+  ai-franchise:
+    container_name: ai-franchise-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.production
+    ports:
+      - "3001:3000"
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

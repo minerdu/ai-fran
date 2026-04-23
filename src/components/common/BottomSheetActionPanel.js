@@ -19,14 +19,31 @@ export default function BottomSheetActionPanel({ open, onClose, title, children,
   const sheetRef = useRef(null);
 
   useEffect(() => {
+    let frameId = null;
+    let animationFrameId = null;
+    let timer = null;
+
     if (open) {
-      setVisible(true);
-      requestAnimationFrame(() => setAnimating(true));
+      frameId = requestAnimationFrame(() => {
+        setVisible(true);
+        animationFrameId = requestAnimationFrame(() => setAnimating(true));
+      });
     } else {
-      setAnimating(false);
-      const timer = setTimeout(() => setVisible(false), 300);
-      return () => clearTimeout(timer);
+      frameId = requestAnimationFrame(() => setAnimating(false));
+      timer = setTimeout(() => setVisible(false), 300);
     }
+
+    return () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId);
+      }
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, [open]);
 
   if (!visible) return null;

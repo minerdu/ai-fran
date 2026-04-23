@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import SystemStatusPanel from '@/components/settings/SystemStatusPanel';
@@ -52,21 +52,22 @@ const TAB_ALIAS_MAP = {
   financial: 'financialModel',
 };
 
+function getRequestedView(searchParams) {
+  const tabParam = searchParams.get('tab');
+  if (!tabParam) {
+    return null;
+  }
+
+  const resolvedKey = TAB_ALIAS_MAP[tabParam] || tabParam;
+  return DETAIL_VIEWS[resolvedKey] ? resolvedKey : null;
+}
+
 function MePageInner() {
   const [viewState, setViewState] = useState('list');
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Auto-open detail view when ?tab=xxx is present in URL
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam) {
-      const resolvedKey = TAB_ALIAS_MAP[tabParam] || tabParam;
-      if (DETAIL_VIEWS[resolvedKey]) {
-        setViewState(resolvedKey);
-      }
-    }
-  }, [searchParams]);
+  const requestedView = getRequestedView(searchParams);
+  const activeView = requestedView ?? viewState;
 
   const handleListAction = (item) => {
     if (item.route) {
@@ -76,19 +77,26 @@ function MePageInner() {
     setViewState(item.key);
   };
 
+  const handleBack = () => {
+    setViewState('list');
+    if (requestedView) {
+      router.replace('/me');
+    }
+  };
+
   // Detail view rendering
-  if (viewState !== 'list') {
-    const viewDef = DETAIL_VIEWS[viewState];
+  if (activeView !== 'list') {
+    const viewDef = DETAIL_VIEWS[activeView];
     if (viewDef) {
       const { title, Component } = viewDef;
       return (
         <div className={styles.settingsPage}>
           <div className={styles.header}>
-            <button className={styles.backBtn} onClick={() => setViewState('list')}>‹ 返回</button>
+            <button className={styles.backBtn} onClick={handleBack}>‹ 返回</button>
             <h2 className={styles.title}>{title}</h2>
           </div>
           <div className={styles.content}>
-            <Component onBack={() => setViewState('list')} />
+            <Component onBack={handleBack} />
           </div>
         </div>
       );
@@ -97,7 +105,7 @@ function MePageInner() {
     return (
       <div className={styles.settingsPage}>
         <div className={styles.header}>
-          <button className={styles.backBtn} onClick={() => setViewState('list')}>‹ 返回</button>
+          <button className={styles.backBtn} onClick={handleBack}>‹ 返回</button>
           <h2 className={styles.title}>设置</h2>
         </div>
         <div className={styles.content}>
