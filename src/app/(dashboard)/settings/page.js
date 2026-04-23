@@ -2,8 +2,9 @@ import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default function SettingsPage({ searchParams }) {
-  const tab = searchParams?.tab;
+export default async function SettingsPage({ searchParams }) {
+  const resolvedSearchParams = await searchParams;
+  const tab = resolvedSearchParams?.tab;
 
   if (tab === 'report' || tab === 'reports') {
     redirect('/reports');
