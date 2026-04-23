@@ -1,0 +1,224 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.heroCard {
+  padding: 20px;
+  border-radius: 24px;
+  background: radial-gradient(circle at top right, rgba(96, 165, 250, 0.15), transparent 40%),
+    linear-gradient(145deg, #eff6ff 0%, #ffffff 55%, #eef2ff 100%);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.06);
+}
+
+.heroTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.heroDesc {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #475569;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #fff;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+.entryGrid,
+.journeyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sectionMeta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.embedCard {
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+}
+
+.agentCard,
+.metricCard,
+.ruleCard,
+.journeyCard {
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+}
+
+.agentHeader,
+.journeyHead,
+.ruleTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.agentTitle,
+.journeyTitle,
+.ruleTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.agentMeta,
+.ruleDesc,
+.metricDesc,
+.journeySummary,
+.agentScope {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.agentScope {
+  margin-top: 10px;
+}
+
+.agentFoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.agentAction {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 13px;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.agentStatus,
+.journeyState,
+.ruleTag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.journeyNums {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.journeyNums strong,
+.metricValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.journeyNums span,
+.metricTitle {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.metricTitle {
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+.statusNeutral {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.statusSuccess {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.statusWarning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+@media (min-width: 768px) {
+  .entryGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .journeyGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

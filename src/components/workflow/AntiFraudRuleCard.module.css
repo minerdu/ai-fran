@@ -1,0 +1,92 @@
+.card {
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 58%, #fef2f2 100%);
+  border: 1px solid rgba(234, 88, 12, 0.12);
+  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.08);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+.title {
+  margin-top: 4px;
+  font-size: 16px;
+  color: #7c2d12;
+}
+
+.summary {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(234, 88, 12, 0.12);
+  font-size: 12px;
+  font-weight: 600;
+  color: #9a3412;
+}
+
+.threshold {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #7c2d12;
+}
+
+.ruleList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.ruleItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(234, 88, 12, 0.1);
+}
+
+.ruleMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ruleLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #c2410c;
+}
+
+.ruleText {
+  font-size: 14px;
+  color: #431407;
+  line-height: 1.5;
+}
+
+.ruleTone {
+  display: inline-flex;
+  align-items: center;
+  height: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}

@@ -1,0 +1,60 @@
+.page { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+
+.hero {
+  padding: 20px; border-radius: 20px;
+  background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.15), transparent 40%), linear-gradient(145deg, #f5f3ff 0%, #fff 55%, #eff6ff 100%);
+  border: 1px solid rgba(139, 92, 246, 0.12);
+}
+
+.eyebrow { font-size: 12px; font-weight: 700; color: #7c3aed; letter-spacing: 0.08em; text-transform: uppercase; }
+.heroTitle { margin-top: 8px; font-size: 20px; color: #0f172a; line-height: 1.4; }
+.heroDesc { margin-top: 8px; font-size: 13px; color: #475569; line-height: 1.6; }
+.backLink { display: inline-block; margin-top: 12px; font-size: 13px; color: #7c3aed; font-weight: 600; }
+
+.searchBar { display: flex; }
+
+.searchInput {
+  width: 100%; padding: 10px 14px; border-radius: 12px;
+  border: 1px solid var(--color-border); background: #fff;
+  font-size: 14px; transition: border-color 0.2s;
+}
+
+.searchInput:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08); }
+
+.typeFilter { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+
+.typeChip {
+  padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 500;
+  background: #fff; border: 1px solid var(--color-border); color: var(--color-text-secondary);
+  white-space: nowrap; transition: all 0.15s; cursor: pointer;
+}
+
+.typeChip:hover { border-color: #7c3aed; color: #7c3aed; }
+.typeActive { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+
+.docList { display: flex; flex-direction: column; gap: 10px; }
+
+.docCard {
+  display: flex; gap: 14px; padding: 14px; border-radius: 16px;
+  background: #fff; border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card); transition: all 0.2s; align-items: flex-start;
+}
+
+.docCard:hover { border-color: rgba(124, 58, 237, 0.2); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+
+.docIcon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+
+.docInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.docHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.docName { font-size: 15px; font-weight: 600; color: #0f172a; }
+.docStatus { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.docDesc { font-size: 13px; color: #64748b; line-height: 1.5; }
+
+.docMeta { display: flex; gap: 10px; font-size: 11px; color: #94a3b8; flex-wrap: wrap; }
+.docType { font-weight: 600; }
+
+.emptyState {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 60px 20px; text-align: center; color: #94a3b8; font-size: 14px;
+}

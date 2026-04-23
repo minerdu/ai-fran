@@ -1,0 +1,83 @@
+.container {
+  background: #1e1b4b; /* Dark purple/blue background */
+  border-radius: 16px;
+  padding: 12px 16px;
+  border: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.headerIcon {
+  font-size: 16px;
+}
+
+.headerTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff; /* White title on dark background */
+  flex: 1;
+}
+
+.refreshBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #fff;
+  transition: all 0.3s;
+}
+.refreshBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(180deg);
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: 1fr; /* 1 column */
+  gap: 8px;
+}
+
+.statusItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #fff;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+.statusItem:hover {
+  background: #f8fafc;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.statusInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statusLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.statusDetail {
+  font-size: 12px;
+  color: #64748b;
+}

@@ -1,0 +1,98 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.title {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.meta {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.status {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.envRow,
+.chips,
+.connectorRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.envTag,
+.chip,
+.connector {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.chip {
+  background: #ffffff;
+  color: #334155;
+}
+
+.connector {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionLabel {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.reason {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.detailLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}

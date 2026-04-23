@@ -1,0 +1,644 @@
+.aiPage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+/* Hub Section */
+.hubSection {
+  text-align: center;
+}
+
+.hubTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 12px;
+}
+
+.boardGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .boardGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.boardCard {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.boardCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+
+.boardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.boardIcon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.boardName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.boardDesc {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 12px;
+  line-height: 1.4;
+  height: 30px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.boardValue {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.boardMeta {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.statLabel {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+/* Section */
+.section {
+  padding: 16px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.sectionDesc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 12px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.viewAllLink {
+  font-size: 13px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.stageGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.stageCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  transition: all 0.2s;
+}
+.stageCard:hover {
+  background: #f1f5f9;
+}
+
+.stageHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stageIcon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.stageName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+}
+
+.stageRunCount {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.stageIdle {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.stageRunList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.miniRunCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.miniRunAgent {
+  font-size: 11px;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.miniRunStatus {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Run Cards */
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.runCard {
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--color-border-light);
+}
+
+.runTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.runAgent {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.runStatus {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.runMetaLine {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.runCurrentStep {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.runSteps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.stepChip {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.stepActive {
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+}
+
+.runApprovalLink {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* Empty hint */
+.emptyHint {
+  padding: 24px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.24);
+}
+
+/* Prompt List */
+.promptList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recommendGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.recommendColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recommendHead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recommendTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.recommendMeta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.actionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.actionRowCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--color-border-light);
+}
+
+.actionRowCard strong {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.actionHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.actionRowCard p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.priorityBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #2563eb;
+  background: #dbeafe;
+}
+
+.actionImpact {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.actionMiniBtn {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: #fff;
+  color: #475569;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.actionMiniPrimary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.suggestionStatus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.statusSuggested {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.statusAccept {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.statusDismiss {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.statusLaunch {
+  color: #2563eb;
+  background: #dbeafe;
+}
+
+.executionHint {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #eff6ff;
+  font-size: 12px;
+  color: #1d4ed8;
+}
+
+.executionHint a {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.actionLink {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2563eb;
+  white-space: nowrap;
+}
+
+.promptCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border: 1px solid rgba(34, 197, 94, 0.12);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.promptCard:hover {
+  border-color: rgba(34, 197, 94, 0.3);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
+}
+
+.promptCard p {
+  margin: 0;
+  font-size: 13px;
+  color: #166534;
+  line-height: 1.5;
+}
+
+.promptDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+/* Action Card */
+.actionCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--color-border-light);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.actionCard:hover {
+  background: #f1f5f9;
+}
+.actionCard h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.actionCard p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.cardArrow {
+  font-size: 18px;
+  color: #94a3b8;
+}
+
+/* Playbook Card */
+.pbCard {
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--color-border-light);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.pbTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.pbTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.pbStatus {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.pbStrategy {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.pbMetrics {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: #475569;
+}
+
+@media (max-width: 480px) {
+  .hubGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .statsGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .stageGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .statValue {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .recommendGrid {
+    grid-template-columns: 1fr;
+  }
+}

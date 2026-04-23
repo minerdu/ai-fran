@@ -1,0 +1,360 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.hero {
+  padding: 20px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(96, 165, 250, 0.2), transparent 40%),
+    linear-gradient(145deg, #eff6ff 0%, #ffffff 55%, #eef2ff 100%);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.06);
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  margin-top: 8px;
+  font-size: 20px;
+  line-height: 1.4;
+  color: #0f172a;
+}
+
+.heroDesc {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.heroActions {
+  margin-top: 14px;
+}
+
+.backLink {
+  font-size: 13px;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.optimizationBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #eff6ff, #f8fafc);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+}
+
+.optimizationTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.optimizationDesc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.optimizationTaskList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.optimizationTaskChip {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  font-size: 12px;
+  color: #334155;
+}
+
+/* KPI */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.kpiCard {
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+}
+
+.kpiLabel {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.kpiValue {
+  display: block;
+  margin-top: 6px;
+  font-size: 26px;
+  line-height: 1;
+}
+
+/* Filter */
+.filterBar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.filterChip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.filterChip:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.filterActive {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.filterCount {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* Playbook List */
+.playbookList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.playbookCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.playbookCard:hover {
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
+  transform: translateY(-1px);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.fromOptimization {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.statusBadge {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cardStrategy {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.cardMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.metricLabel {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.metricValue {
+  font-size: 16px;
+  color: #0f172a;
+}
+
+/* Milestone */
+.milestoneBar {
+  display: flex;
+  gap: 0;
+  position: relative;
+}
+
+.milestoneStep {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.milestoneStep::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  right: -50%;
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+.milestoneStep:last-child::before {
+  display: none;
+}
+
+.ms_done::before { background: #22c55e; }
+.ms_in_progress::before { background: linear-gradient(90deg, #2563eb, #e2e8f0); }
+
+.milestoneDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  border: 2px solid #fff;
+  z-index: 1;
+  box-shadow: 0 0 0 2px #e2e8f0;
+}
+
+.ms_done .milestoneDot { background: #22c55e; box-shadow: 0 0 0 2px #22c55e; }
+.ms_in_progress .milestoneDot { background: #2563eb; box-shadow: 0 0 0 2px #2563eb; animation: pulse 2s infinite; }
+.ms_pending .milestoneDot { background: #e2e8f0; }
+
+.milestoneName {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.ms_done .milestoneName { color: #166534; }
+.ms_in_progress .milestoneName { color: #2563eb; font-weight: 600; }
+
+/* Assets */
+.assetRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.assetChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.assetMore {
+  font-size: 11px;
+  color: #2563eb;
+  padding: 3px 6px;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.cardArrow {
+  font-size: 18px;
+  color: #2563eb;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 20px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  .kpiGrid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 2px #2563eb; }
+  50% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.3); }
+}

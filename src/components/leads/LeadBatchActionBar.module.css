@@ -1,0 +1,47 @@
+.batchActionBar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(8px);
+  padding: 12px 24px;
+  border-radius: 40px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.batchCount {
+  color: white;
+  font-size: 14px;
+}
+
+.batchActions {
+  display: flex;
+  gap: 12px;
+}
+
+.batchBtnSecondary,
+.batchBtnPrimary {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.batchBtnSecondary {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: white;
+}
+
+.batchBtnPrimary {
+  background: #07c160;
+  border: none;
+  color: white;
+  font-weight: 600;
+}

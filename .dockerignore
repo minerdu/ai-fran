@@ -1,0 +1,13 @@
+# Docker ignore — 减少构建上下文体积
+node_modules
+.next
+.git
+*.db
+*.db-journal
+dev-server*.log
+start-server*.log
+.env*
+!.env.production
+.DS_Store
+.vercel
+scripts/
