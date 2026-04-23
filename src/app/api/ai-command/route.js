@@ -249,38 +249,43 @@ export async function POST(request) {
     let plan;
 
     if (config && config.enabled && config.apiKey && config.apiBaseUrl) {
-      // 真实 LLM 解析指令
-      const systemPrompt = buildCommandSystemPrompt(leadSummary);
-      const llmResponse = await callLLM(config, systemPrompt, command);
-
-      // 提取 JSON（LLM 可能在 JSON 前后包裹 markdown 代码块）
-      let jsonStr = llmResponse;
-      const jsonMatch = llmResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) jsonStr = jsonMatch[0];
-
       try {
-        plan = JSON.parse(jsonStr);
-      } catch (e) {
-        const commandCard = buildCommandCard({
-          id: commandId,
-          input: command,
-          intent: 'free_text_reply',
-          status: 'completed',
-          summary: llmResponse,
-          linkedObjects: [],
-          context,
-          resultType: 'text_reply',
-        });
-        await recordCommandAudit(commandId, command, context, 'text_reply', llmResponse, {
-          commandCard,
-        });
-        return NextResponse.json({
-          success: true,
-          type: 'text',
-          message: llmResponse, // 如果 LLM 没返回 JSON，直接当文本回复
-          command: commandCard,
-          context,
-        });
+        // 真实 LLM 解析指令
+        const systemPrompt = buildCommandSystemPrompt(leadSummary);
+        const llmResponse = await callLLM(config, systemPrompt, command);
+
+        // 提取 JSON（LLM 可能在 JSON 前后包裹 markdown 代码块）
+        let jsonStr = llmResponse;
+        const jsonMatch = llmResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+
+        try {
+          plan = JSON.parse(jsonStr);
+        } catch (e) {
+          const commandCard = buildCommandCard({
+            id: commandId,
+            input: command,
+            intent: 'free_text_reply',
+            status: 'completed',
+            summary: llmResponse,
+            linkedObjects: [],
+            context,
+            resultType: 'text_reply',
+          });
+          await recordCommandAudit(commandId, command, context, 'text_reply', llmResponse, {
+            commandCard,
+          });
+          return NextResponse.json({
+            success: true,
+            type: 'text',
+            message: llmResponse, // 如果 LLM 没返回 JSON，直接当文本回复
+            command: commandCard,
+            context,
+          });
+        }
+      } catch (llmError) {
+        console.warn('[AI-Command] LLM unavailable, fallback to mock plan:', llmError.message);
+        plan = buildMockPlan(command, leads);
       }
     } else {
       // Mock 模式
