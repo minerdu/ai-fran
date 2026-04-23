@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/basePath';
 import { useToast } from '@/components/common/Toast';
 import styles from './SafetyFilters.module.css';
 
@@ -19,21 +20,37 @@ export default function SafetyFilters() {
   const [isLoading, setIsLoading] = useState(true);
   const [newKeyword, setNewKeyword] = useState({ stop: '', financial: '' });
   const [dailyLimit, setDailyLimit] = useState('100');
-
   const [aiBehavior, setAiBehavior] = useState('normal');
+  const [loadError, setLoadError] = useState('');
 
   const loadRules = useCallback(async () => {
     setIsLoading(true);
+    setLoadError('');
     try {
-      const res = await fetch('/api/safety-rules');
+      const res = await apiFetch('/api/safety-rules');
       if (res.ok) {
         const data = await res.json();
         setRules(data);
         if (data.daily_limit?.value) {
           setDailyLimit(String(data.daily_limit.value));
         }
+      } else {
+        setRules({
+          stop_keywords: [],
+          financial_keywords: [],
+          journey_blocks: [],
+          daily_limit: { value: '100', isActive: true },
+        });
+        setLoadError('安全规则接口加载失败，已显示默认配置。');
       }
     } catch (e) {
+      setRules({
+        stop_keywords: [],
+        financial_keywords: [],
+        journey_blocks: [],
+        daily_limit: { value: '100', isActive: true },
+      });
+      setLoadError('安全规则接口不可用，已显示默认配置。');
       toast.error('加载安全规则失败');
     } finally {
       setIsLoading(false);
@@ -47,7 +64,7 @@ export default function SafetyFilters() {
   const addRule = async (ruleType, value) => {
     if (!value.trim()) return;
     try {
-      const res = await fetch('/api/safety-rules', {
+      const res = await apiFetch('/api/safety-rules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ruleType, value: value.trim() }),
@@ -67,7 +84,7 @@ export default function SafetyFilters() {
 
   const deleteRule = async (id) => {
     try {
-      const res = await fetch(`/api/safety-rules?id=${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/safety-rules?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('已删除');
         loadRules();
@@ -79,7 +96,7 @@ export default function SafetyFilters() {
 
   const toggleRule = async (id, isActive) => {
     try {
-      await fetch('/api/safety-rules', {
+      await apiFetch('/api/safety-rules', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, isActive }),
@@ -104,6 +121,11 @@ export default function SafetyFilters() {
 
   return (
     <div className={styles.container}>
+      {loadError ? (
+        <div style={{ marginBottom: '16px', padding: '12px 14px', borderRadius: '10px', background: '#fff7ed', color: '#c2410c', fontSize: '13px' }}>
+          {loadError}
+        </div>
+      ) : null}
       {/* 行业通用规则与行业业务规则 */}
       <div className={styles.section}>
         <div className={styles.sectionHeader} style={{ padding: '16px', backgroundColor: '#FEF2F2', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center' }}>

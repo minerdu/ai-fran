@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/basePath';
 import SafetyFilters from './SafetyFilters';
 import styles from '@/app/(dashboard)/me/page.module.css';
 
@@ -8,7 +9,7 @@ export default function RedLineConfigCard() {
   const [summary, setSummary] = useState(null);
 
   useEffect(() => {
-    fetch('/api/safety-rules')
+    apiFetch('/api/safety-rules')
       .then((res) => res.json())
       .then((data) => {
         setSummary({

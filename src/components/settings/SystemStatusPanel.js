@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/basePath';
 import styles from './SystemStatusPanel.module.css';
 
 const KB_LABELS = {
@@ -33,8 +34,8 @@ export default function SystemStatusPanel() {
   const checkStatuses = useCallback(async () => {
     try {
       const [aiRes, readinessRes] = await Promise.all([
-        fetch('/api/settings/ai-model', { cache: 'no-store' }),
-        fetch('/api/integrations/readiness', { cache: 'no-store' }),
+        apiFetch('/api/settings/ai-model', { cache: 'no-store' }),
+        apiFetch('/api/integrations/readiness', { cache: 'no-store' }),
       ]);
 
       const aiData = aiRes.ok ? await aiRes.json() : null;

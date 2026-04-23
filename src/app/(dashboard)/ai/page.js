@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '@/lib/basePath';
 import styles from './page.module.css';
 
 const RUN_STATUS_META = {
@@ -27,20 +28,34 @@ const FRANCHISE_STAGES = [
 export default function AiPage() {
   const router = useRouter();
   const [data, setData] = useState(null);
+  const [error, setError] = useState('');
 
   const loadData = useCallback(() => {
-    fetch('/api/reports/aggregate')
-      .then((res) => res.json())
-      .then((payload) => setData(payload))
-      .catch((error) => console.error(error));
+    setError('');
+    apiFetch('/api/reports/aggregate')
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`AI 中枢接口返回 ${res.status}`);
+        }
+        const payload = await res.json();
+        setData(payload);
+      })
+      .catch((fetchError) => {
+        console.error(fetchError);
+        setError('AI 招商中枢加载失败，请刷新后重试。');
+      });
   }, []);
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [loadData]);
 
   const handleSuggestionAction = async (id, action) => {
-    await fetch('/api/optimization-suggestions', {
+    await apiFetch('/api/optimization-suggestions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, action }),
@@ -64,7 +79,7 @@ export default function AiPage() {
   }, [data]);
 
   if (!data) {
-    return <div className={styles.aiPage}>加载中...</div>;
+    return <div className={styles.aiPage}>{error || '加载中...'}</div>;
   }
 
   return (

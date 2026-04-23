@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/basePath';
 import {
   AreaChart,
   Area,
@@ -40,23 +41,37 @@ export default function FranchiseReportView({
   eyebrow = 'AI 招商',
 }) {
   const [data, setData] = useState(null);
+  const [error, setError] = useState('');
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [viewMode, setViewMode] = useState('day');
   const [activeTab, setActiveTab] = useState('report');
 
   const loadData = useCallback(() => {
-    fetch(`/api/reports/aggregate?date=${selectedDate}&viewMode=${viewMode}`)
-      .then((res) => res.json())
-      .then((payload) => setData(payload))
-      .catch((error) => console.error(error));
+    setError('');
+    apiFetch(`/api/reports/aggregate?date=${selectedDate}&viewMode=${viewMode}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`报告接口返回 ${res.status}`);
+        }
+        const payload = await res.json();
+        setData(payload);
+      })
+      .catch((fetchError) => {
+        console.error(fetchError);
+        setError('招商报告加载失败，请刷新后重试。');
+      });
   }, [selectedDate, viewMode]);
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [loadData]);
 
   const handleSuggestionAction = async (id, action) => {
-    await fetch('/api/optimization-suggestions', {
+    await apiFetch('/api/optimization-suggestions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, action }),
@@ -65,7 +80,7 @@ export default function FranchiseReportView({
   };
 
   if (!data) {
-    return <div className={styles.page}>加载中...</div>;
+    return <div className={styles.page}>{error || '加载中...'}</div>;
   }
 
   const { report, reportEntries, statusStrip, attribution, stageAttribution, anomalies, optimizationSuggestions } = data;
