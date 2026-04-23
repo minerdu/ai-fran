@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import useStore from '@/lib/store';
 import { useToast } from '@/components/common/Toast';
+import { apiFetch } from '@/lib/basePath';
 import styles from './ChatPanel.module.css';
 import MaterialSelector from '@/components/common/MaterialSelector';
 
@@ -13,6 +14,21 @@ const STAGE_COLORS = {
   signed: '#07C160',
   rejected: '#ff4d4f',
 };
+
+async function parseApiResponse(res, fallbackMessage) {
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text();
+    throw new Error(text ? `${fallbackMessage}（服务返回异常页面）` : fallbackMessage);
+  }
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.message || fallbackMessage);
+  }
+
+  return data;
+}
 
 export default function ChatPanel({ leadName, leadId, initialMessages, ...legacyProps }) {
   const resolvedLeadName = leadName || legacyProps.customerName;
@@ -41,8 +57,8 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
   const handleLoadFullHistory = async () => {
     setIsLoadingAll(true);
     try {
-      const res = await fetch(`/api/messages?leadId=${resolvedLeadId}&all=true`);
-      const data = await res.json();
+      const res = await apiFetch(`/api/messages?leadId=${resolvedLeadId}&all=true`);
+      const data = await parseApiResponse(res, '加载完整沟通记录失败');
       setMessages(data);
       setIsAllLoaded(true);
     } catch (e) {
@@ -79,8 +95,8 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
     for (let i = 0; i < 15; i++) {
       await new Promise(r => setTimeout(r, 2000));
       try {
-        const res = await fetch(`/api/messages?leadId=${leadId}&all=true`);
-        const data = await res.json();
+        const res = await apiFetch(`/api/messages?leadId=${leadId}&all=true`);
+        const data = await parseApiResponse(res, '轮询消息失败');
         if (Array.isArray(data) && data.length > knownCount) {
           setMessages(data);
           setIsTyping(false);
@@ -107,11 +123,12 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
     setIsTyping(true);
     if (resolvedLeadId) {
       try {
-        await fetch('/api/messages', {
+        const res = await apiFetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ leadId: resolvedLeadId, content, senderType: 'customer' }),
         });
+        await parseApiResponse(res, '发送消息失败');
         const currentCount = messages.length + 1;
         pollForReplies(resolvedLeadId, currentCount);
       } catch (e) {
@@ -134,12 +151,12 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
     setInputValue('');
     setIsProcessingCommand(true);
     try {
-      const res = await fetch('/api/ai-command', {
+      const res = await apiFetch('/api/ai-command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command }),
       });
-      const data = await res.json();
+      const data = await parseApiResponse(res, 'AI 指令执行失败');
       if (data.success && (data.type === 'workflow' || data.type === 'sop_workflow')) {
         setCommandMessages(prev => [...prev, {
           id: `result-${Date.now()}`,
@@ -200,11 +217,12 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
     setShowMaterialPicker(false);
     if (resolvedLeadId) {
       try {
-        await fetch('/api/messages', {
+        const res = await apiFetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ leadId: resolvedLeadId, content: finalContent, senderType: 'human' }),
         });
+        await parseApiResponse(res, '发送素材失败');
       } catch (e) { console.error(e); }
     }
     toast.success('素材已发送');
@@ -217,7 +235,7 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
     }
     setIsCreatingTask(true);
     try {
-      const res = await fetch('/api/tasks', {
+      const res = await apiFetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -231,16 +249,13 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
           needApproval: taskForm.needApproval,
         })
       });
-      if (res.ok) {
-        toast.success('跟进任务已创建，等待审批');
-        setShowTaskCreator(false);
-        setTaskForm({ taskType: 'text', content: '', scheduledAt: '', needApproval: true });
-      } else {
-        toast.error('创建任务失败');
-      }
+      await parseApiResponse(res, '创建任务失败');
+      toast.success('跟进任务已创建，等待审批');
+      setShowTaskCreator(false);
+      setTaskForm({ taskType: 'text', content: '', scheduledAt: '', needApproval: true });
     } catch (e) {
       console.error('Failed to create task:', e);
-      toast.error('网络错误，请重试');
+      toast.error(e.message || '网络错误，请重试');
     } finally {
       setIsCreatingTask(false);
     }
@@ -262,8 +277,8 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
   useEffect(() => {
     if (!resolvedLeadId) {
       setIsLoadingStats(true);
-      fetch('/api/tasks')
-        .then(r => r.json())
+      apiFetch('/api/tasks')
+        .then(r => parseApiResponse(r, '加载任务统计失败'))
         .then(data => {
           const tasks = Array.isArray(data) ? data : [];
           const today = new Date();
