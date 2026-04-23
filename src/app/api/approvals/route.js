@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { batchDecideApprovals, handleApprovalAction, listApprovals } from '@/lib/approvalService';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const items = await listApprovals();
