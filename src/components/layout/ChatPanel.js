@@ -15,7 +15,7 @@ const STAGE_COLORS = {
   rejected: '#ff4d4f',
 };
 
-const COMMAND_HISTORY_STORAGE_KEY = 'fran-command-center-history-v2';
+const COMMAND_HISTORY_STORAGE_KEY = 'fran-command-center-history-v3';
 
 const THINKING_STEPS = [
   {
@@ -65,34 +65,28 @@ function formatMessageTime(value) {
   return `${d.getFullYear()}/${month}/${day} ${time}`;
 }
 
-function buildCommandMessagesFromAggregate(commands) {
-  if (!Array.isArray(commands)) return [];
-
-  return commands.flatMap((command) => {
-    const userMessage = {
-      id: `history-user-${command.id}`,
-      role: 'user',
-      content: command.input,
-      time: command.createdAt,
-      historyId: command.id,
-      source: 'aggregate',
-    };
-
-    const systemMessage = {
-      id: `history-system-${command.id}`,
-      role: 'system',
-      type: command.status === 'failed' ? 'error' : 'text',
-      content: command.resultSummary || '已执行',
-      time: command.createdAt,
-      historyId: command.id,
-      source: 'aggregate',
-      status: command.status,
-      linkedObjects: command.linkedObjects || [],
-      execution: command.execution || null,
-    };
-
-    return [userMessage, systemMessage];
-  });
+function buildCommandHistoryRecord(userMessage, systemMessage) {
+  return {
+    id: userMessage.id,
+    createdAt: userMessage.time,
+    command: userMessage.content,
+    summary: systemMessage?.data?.summary || systemMessage?.content || '等待 AI 返回执行结果',
+    status: systemMessage?.type === 'error'
+      ? '异常'
+      : systemMessage?.data?.plan?.needApproval
+        ? '待审批'
+        : systemMessage
+          ? '已生成'
+          : '处理中',
+    statusTone: systemMessage?.type === 'error'
+      ? 'danger'
+      : systemMessage?.data?.plan?.needApproval
+        ? 'warning'
+        : systemMessage
+          ? 'success'
+          : 'neutral',
+    messages: [userMessage, ...(systemMessage ? [systemMessage] : [])],
+  };
 }
 
 async function parseApiResponse(res, fallbackMessage) {
@@ -127,6 +121,7 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
   const [isProcessingCommand, setIsProcessingCommand] = useState(false);
   const [thinkingStepIndex, setThinkingStepIndex] = useState(0);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [commandHistoryRecords, setCommandHistoryRecords] = useState([]);
   const messagesEndRef = useRef(null);
   const prevLeadIdRef = useRef(resolvedLeadId);
   const toast = useToast();
@@ -172,34 +167,23 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setCommandMessages(parsed);
-          return;
+          setCommandHistoryRecords(parsed);
         }
       }
     } catch (error) {
       console.error('Failed to restore command history:', error);
     }
-
-    apiFetch('/api/reports/aggregate', { cache: 'no-store' })
-      .then((res) => parseApiResponse(res, '加载历史指令失败'))
-      .then((payload) => {
-        const hydrated = buildCommandMessagesFromAggregate(payload?.latestCommands);
-        if (hydrated.length > 0) {
-          setCommandMessages(hydrated);
-        }
-      })
-      .catch(() => {});
   }, [resolvedLeadId]);
 
   useEffect(() => {
     if (resolvedLeadId || typeof window === 'undefined') return;
 
     try {
-      window.localStorage.setItem(COMMAND_HISTORY_STORAGE_KEY, JSON.stringify(commandMessages));
+      window.localStorage.setItem(COMMAND_HISTORY_STORAGE_KEY, JSON.stringify(commandHistoryRecords));
     } catch (error) {
       console.error('Failed to persist command history:', error);
     }
-  }, [resolvedLeadId, commandMessages]);
+  }, [resolvedLeadId, commandHistoryRecords]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -276,13 +260,13 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
     if (!inputValue.trim()) return;
     const command = inputValue;
     const commandTime = new Date().toISOString();
-    const commandId = `cmd-${Date.now()}`;
-    setCommandMessages(prev => [...prev, {
-      id: commandId,
+    const userMessage = {
+      id: `cmd-${Date.now()}`,
       role: 'user',
       content: command,
       time: commandTime,
-    }]);
+    };
+    setCommandMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsProcessingCommand(true);
     const startedAt = Date.now();
@@ -298,58 +282,62 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
         await sleep(1800 - elapsed);
       }
       if (data.success && (data.type === 'workflow' || data.type === 'sop_workflow')) {
-        setCommandMessages(prev => [...prev, {
+        const systemMessage = {
           id: `result-${Date.now()}`,
           role: 'system',
           type: data.type === 'sop_workflow' ? 'sop_workflow' : 'workflow',
           data: data,
           time: new Date().toISOString(),
-          historyId: commandId,
-        }]);
+        };
+        setCommandMessages(prev => [...prev, systemMessage]);
+        setCommandHistoryRecords(prev => [buildCommandHistoryRecord(userMessage, systemMessage), ...prev.filter((item) => item.id !== userMessage.id)]);
         toast.success(data.summary);
       } else if (data.success && data.type === 'text') {
-        setCommandMessages(prev => [...prev, {
+        const systemMessage = {
           id: `text-${Date.now()}`,
           role: 'system',
           type: 'text',
           content: data.message,
           time: new Date().toISOString(),
-          historyId: commandId,
-        }]);
+        };
+        setCommandMessages(prev => [...prev, systemMessage]);
+        setCommandHistoryRecords(prev => [buildCommandHistoryRecord(userMessage, systemMessage), ...prev.filter((item) => item.id !== userMessage.id)]);
       } else {
-        setCommandMessages(prev => [...prev, {
+        const systemMessage = {
           id: `err-${Date.now()}`,
           role: 'system',
           type: 'error',
           content: data.message || '执行失败',
           time: new Date().toISOString(),
-          historyId: commandId,
-        }]);
+        };
+        setCommandMessages(prev => [...prev, systemMessage]);
+        setCommandHistoryRecords(prev => [buildCommandHistoryRecord(userMessage, systemMessage), ...prev.filter((item) => item.id !== userMessage.id)]);
       }
     } catch (e) {
       const elapsed = Date.now() - startedAt;
       if (elapsed < 1200) {
         await sleep(1200 - elapsed);
       }
-      setCommandMessages(prev => [...prev, {
+      const systemMessage = {
         id: `err-${Date.now()}`,
         role: 'system',
         type: 'error',
         content: `网络错误: ${e.message}`,
         time: new Date().toISOString(),
-        historyId: commandId,
-      }]);
+      };
+      setCommandMessages(prev => [...prev, systemMessage]);
+      setCommandHistoryRecords(prev => [buildCommandHistoryRecord(userMessage, systemMessage), ...prev.filter((item) => item.id !== userMessage.id)]);
     } finally {
       setIsProcessingCommand(false);
     }
   };
 
-  const focusCommandRecord = (recordId) => {
+  const viewCommandRecord = (recordId) => {
     setShowHistoryPanel(false);
-    window.requestAnimationFrame(() => {
-      const target = document.getElementById(`command-record-${recordId}`);
-      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
+    const record = commandHistoryRecords.find((item) => item.id === recordId);
+    if (record?.messages?.length) {
+      setCommandMessages(record.messages);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -479,44 +467,7 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
     }
   }, [resolvedLeadId]);
 
-  const commandHistory = [];
-  for (let index = 0; index < commandMessages.length; index += 1) {
-    const current = commandMessages[index];
-    if (current.role !== 'user') continue;
-
-    let response = null;
-    for (let cursor = index + 1; cursor < commandMessages.length; cursor += 1) {
-      if (commandMessages[cursor].role === 'system') {
-        response = commandMessages[cursor];
-        break;
-      }
-      if (commandMessages[cursor].role === 'user') {
-        break;
-      }
-    }
-
-    commandHistory.unshift({
-      id: current.id,
-      anchorId: current.id,
-      command: current.content,
-      time: current.time,
-      summary: response?.data?.summary || response?.content || '等待 AI 返回执行结果',
-      status: response?.type === 'error'
-        ? '异常'
-        : response?.data?.plan?.needApproval
-          ? '待审批'
-          : response
-            ? '已生成'
-            : '处理中',
-      statusTone: response?.type === 'error'
-        ? 'danger'
-        : response?.data?.plan?.needApproval
-          ? 'warning'
-          : response
-            ? 'success'
-            : 'neutral',
-    });
-  }
+  const commandHistory = commandHistoryRecords;
 
   // ==========================================
   // 招商指挥中心模式（未选择线索时）— 统一布局
@@ -591,34 +542,21 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
 
         {/* ===== MIDDLE: Command Messages Area ===== */}
         <div className={styles.messagesArea}>
-          <div className={styles.commandCenterToolbar}>
-            <div className={styles.commandCenterMeta}>
-              <span className={styles.commandCenterBadge}>AI 指令台</span>
-              <span className={styles.commandCenterHint}>自然语言招商指令、审批和执行结果都在这里沉淀</span>
-            </div>
-            <button
-              type="button"
-              className={styles.historyTrigger}
-              onClick={() => setShowHistoryPanel(true)}
-              disabled={commandHistory.length === 0}
-            >
-              历史指令
-              <span className={styles.historyCount}>{commandHistory.length}</span>
-            </button>
-          </div>
           {commandMessages.length === 0 ? (
             <div className={styles.emptyChat}>
               <div className={styles.emptyChatIcon}>🎯</div>
               <h3 className={styles.emptyChatTitle}>AI智能招商中心</h3>
               <p className={styles.emptyChatDesc}>用自然语言下达招商指令，AI 将自动解析并执行</p>
-              <button
-                type="button"
-                className={styles.historyPreviewBtn}
-                onClick={() => setShowHistoryPanel(true)}
-                disabled={commandHistory.length === 0}
-              >
-                查看历史指令记录
-              </button>
+              <div className={styles.commandQuickActions}>
+                <button
+                  type="button"
+                  className={styles.historyPreviewBtn}
+                  onClick={() => setShowHistoryPanel(true)}
+                  disabled={commandHistory.length === 0}
+                >
+                  查看历史指令记录
+                </button>
+              </div>
               <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '320px' }}>
                 {[
                   '📑 给高意向线索发送品牌招商手册',
@@ -644,10 +582,17 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
             </div>
           ) : (
             <div className={styles.messagesList}>
+              <div className={styles.commandMessageActions}>
+                <button type="button" className={styles.commandGhostBtn} onClick={() => setShowHistoryPanel(true)}>
+                  历史指令
+                </button>
+                <button type="button" className={styles.commandGhostBtn} onClick={() => setCommandMessages([])}>
+                  返回推荐指令
+                </button>
+              </div>
               {commandMessages.map((msg) => (
                 <div
                   key={msg.id}
-                  id={msg.role === 'user' ? `command-record-${msg.id}` : undefined}
                   className={`${styles.messageWrapper} ${msg.role === 'user' ? styles.outbound : styles.inbound} animate-fadeInUp`}
                 >
                   {msg.role === 'system' && (
@@ -806,7 +751,7 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
                     key={entry.id}
                     type="button"
                     className={styles.historyItem}
-                    onClick={() => focusCommandRecord(entry.anchorId)}
+                    onClick={() => viewCommandRecord(entry.id)}
                   >
                     <div className={styles.historyItemTop}>
                       <span className={styles.historyItemCommand}>{entry.command}</span>
