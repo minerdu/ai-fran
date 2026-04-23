@@ -41,8 +41,6 @@ export default function SystemStatusPanel() {
       const aiData = aiRes.ok ? await aiRes.json() : null;
       const readinessData = readinessRes.ok ? await readinessRes.json() : null;
       const crmItem = readinessData?.items?.find((item) => item.channel === 'crm');
-      const readyCount = readinessData?.summary?.ready ?? 0;
-      const totalCount = readinessData?.summary?.total ?? 0;
 
       setStatuses((prev) => ({
         ...prev,
@@ -72,9 +70,7 @@ export default function SystemStatusPanel() {
         skillCenter: {
           ...prev.skillCenter,
           status: 'online',
-          detail: totalCount > 0
-            ? `已加载 樊文花Skill · 联调通道 ${readyCount}/${totalCount}`
-            : '已加载 樊文花Skill',
+          detail: '已加载 樊文花Skill',
         },
       }));
     } catch {

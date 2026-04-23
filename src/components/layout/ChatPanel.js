@@ -526,8 +526,10 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
             <div className={styles.journeyStageGrid}>
               {journeyStats.stages.map((stage, i) => (
                 <div key={i} className={styles.journeyStageCard}>
-                  <div className={styles.journeyStageIcon}>{stage.icon}</div>
-                  <div className={styles.journeyStageLabel}>{stage.label}</div>
+                  <div className={styles.journeyStageMeta}>
+                    <div className={styles.journeyStageIcon}>{stage.icon}</div>
+                    <div className={styles.journeyStageLabel}>{stage.label}</div>
+                  </div>
                   <div
                     className={styles.journeyStageValue}
                     style={{ color: stage.count > 0 ? '#2563EB' : 'var(--color-text-tertiary)' }}
