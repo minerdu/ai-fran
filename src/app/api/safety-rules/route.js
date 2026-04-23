@@ -8,9 +8,47 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+const DEFAULT_SAFETY_RULES = [
+  { ruleType: 'stop_keyword', value: '保底回本' },
+  { ruleType: 'stop_keyword', value: '稳赚不赔' },
+  { ruleType: 'stop_keyword', value: '100%赚钱' },
+  { ruleType: 'financial_keyword', value: '返现承诺' },
+  { ruleType: 'financial_keyword', value: '个人账户收款' },
+  { ruleType: 'financial_keyword', value: '私下打款' },
+  { ruleType: 'journey_block', value: '凌晨 22:00-08:00 禁止主动触达' },
+  { ruleType: 'journey_block', value: '未建档线索禁止直接报价' },
+  { ruleType: 'daily_limit', value: '100' },
+];
+
+async function ensureDefaultSafetyRules() {
+  const rules = await prisma.safetyRule.findMany({
+    select: {
+      ruleType: true,
+      value: true,
+    },
+  });
+
+  const existingPairs = new Set(rules.map((rule) => `${rule.ruleType}:${rule.value}`));
+  const hasDailyLimit = rules.some((rule) => rule.ruleType === 'daily_limit');
+  const missingRules = DEFAULT_SAFETY_RULES.filter((rule) => {
+    if (rule.ruleType === 'daily_limit') {
+      return !hasDailyLimit;
+    }
+    return !existingPairs.has(`${rule.ruleType}:${rule.value}`);
+  });
+
+  if (missingRules.length > 0) {
+    await prisma.safetyRule.createMany({
+      data: missingRules,
+    });
+  }
+}
+
 // GET - 获取所有安全规则
 export async function GET() {
   try {
+    await ensureDefaultSafetyRules();
+
     const rules = await prisma.safetyRule.findMany({
       orderBy: [
         { ruleType: 'asc' },

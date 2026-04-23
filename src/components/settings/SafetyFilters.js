@@ -30,7 +30,7 @@ export default function SafetyFilters() {
         const data = await res.json();
         setRules(data);
         if (data.daily_limit?.value) {
-          setDailyLimit(data.daily_limit.value > 50 ? '10' : data.daily_limit.value);
+          setDailyLimit(String(data.daily_limit.value));
         }
       }
     } catch (e) {
@@ -225,7 +225,7 @@ export default function SafetyFilters() {
           <input
             type="range"
             min="1"
-            max="50"
+            max="200"
             step="1"
             value={dailyLimit}
             onChange={e => setDailyLimit(e.target.value)}

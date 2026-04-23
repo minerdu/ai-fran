@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import SystemStatusPanel from '@/components/settings/SystemStatusPanel';
@@ -38,7 +38,6 @@ const DETAIL_VIEWS = {
 const TAB_ALIAS_MAP = {
   skill: 'skillCenter',
   materials: 'franchiseDocs',
-  report: 'autonomousOps',
   persona: 'persona',
   aiModel: 'aiModel',
   engine: 'autonomousOps',
@@ -52,6 +51,11 @@ const TAB_ALIAS_MAP = {
   financial: 'financialModel',
 };
 
+const TAB_ROUTE_MAP = {
+  report: '/reports',
+  reports: '/reports',
+};
+
 function getRequestedView(searchParams) {
   const tabParam = searchParams.get('tab');
   if (!tabParam) {
@@ -62,12 +66,28 @@ function getRequestedView(searchParams) {
   return DETAIL_VIEWS[resolvedKey] ? resolvedKey : null;
 }
 
+function getRequestedRoute(searchParams) {
+  const tabParam = searchParams.get('tab');
+  if (!tabParam) {
+    return null;
+  }
+
+  return TAB_ROUTE_MAP[tabParam] || null;
+}
+
 function MePageInner() {
   const [viewState, setViewState] = useState('list');
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedView = getRequestedView(searchParams);
+  const requestedRoute = getRequestedRoute(searchParams);
   const activeView = requestedView ?? viewState;
+
+  useEffect(() => {
+    if (requestedRoute) {
+      router.replace(requestedRoute);
+    }
+  }, [requestedRoute, router]);
 
   const handleListAction = (item) => {
     if (item.route) {

@@ -1,13 +1,32 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+const DEFAULT_AI_MODEL_CONFIG = {
+  id: 'default',
+  enabled: true,
+  provider: 'openai',
+  modelName: 'gpt-5.4',
+  kbSource: 'zhipu',
+  kbId: 'franchise-brand-kb',
+  kbApiUrl: 'https://open.bigmodel.cn/api/paas/v4/',
+  enableSegment: true,
+  segmentCount: 3,
+  segmentTriggerChars: 120,
+  segmentModelName: 'zhipu',
+  segmentModelApiUrl: 'https://open.bigmodel.cn/api/paas/v4/',
+  sendInterval: 3,
+  stopKeywords: '不考虑了,暂停,别联系了,预算冻结',
+  smartSkipMode: true,
+  imageAnalysis: true,
+};
+
 // GET - Load AI model config
 export async function GET() {
   try {
     let config = await prisma.aiModelConfig.findUnique({ where: { id: 'default' } });
     if (!config) {
       config = await prisma.aiModelConfig.create({
-        data: { id: 'default' }
+        data: DEFAULT_AI_MODEL_CONFIG,
       });
     }
     // Mask API key for security (only show last 6 chars)
@@ -77,7 +96,7 @@ export async function PUT(request) {
     const config = await prisma.aiModelConfig.upsert({
       where: { id: 'default' },
       update: data,
-      create: { id: 'default', ...data },
+      create: { ...DEFAULT_AI_MODEL_CONFIG, ...data },
     });
 
     return NextResponse.json({ success: true, enabled: config.enabled });

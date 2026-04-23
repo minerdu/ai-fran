@@ -3,6 +3,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from './SystemStatusPanel.module.css';
 
+const KB_LABELS = {
+  zhipu: '智普知识库',
+  dify: 'Dify 知识库',
+  custom: '指定知识库',
+  default: '默认知识上下文',
+  none: '未启用知识库',
+};
+
+function formatKnowledgeBaseDetail(aiData) {
+  const source = aiData?.kbSource || 'zhipu';
+  const label = KB_LABELS[source] || source;
+  return aiData?.kbId ? `${label} / ${aiData.kbId}` : label;
+}
+
 /**
  * 系统状态面板
  * 展示 AI 模型连通性、知识库、CRM 连接状态、Skill中心状态
@@ -10,10 +24,10 @@ import styles from './SystemStatusPanel.module.css';
  */
 export default function SystemStatusPanel() {
   const [statuses, setStatuses] = useState({
-    aiModel: { status: 'offline', label: 'AI 大模型', detail: 'openai / gpt-5.4' },
-    knowledgeBase: { status: 'warning', label: '知识库', detail: '待配置' },
-    crm: { status: 'warning', label: 'CRM系统', detail: '等待联调' },
-    skillCenter: { status: 'online', label: 'Skill中心', detail: '内置 3 个标杆 Skill' },
+    aiModel: { status: 'warning', label: 'AI 大模型', detail: 'OPENAI / gpt-5.4' },
+    knowledgeBase: { status: 'online', label: '知识库', detail: '智普知识库 / franchise-brand-kb' },
+    crm: { status: 'warning', label: 'CRM系统', detail: '有赞 CRM / 待授权' },
+    skillCenter: { status: 'online', label: 'Skill中心', detail: '默认加载 樊文花 Skill' },
   });
 
   const checkStatuses = useCallback(async () => {
@@ -34,16 +48,12 @@ export default function SystemStatusPanel() {
         aiModel: {
           ...prev.aiModel,
           status: aiData?.enabled && aiData?.apiKeyMasked ? 'online' : 'offline',
-          detail: aiData?.enabled
-            ? `${aiData.provider || 'openai'} / ${aiData.modelName || '未命名模型'}`
-            : '未启用',
+          detail: `${(aiData?.provider || 'openai').toUpperCase()} / ${aiData?.modelName || 'gpt-5.4'}`,
         },
         knowledgeBase: {
           ...prev.knowledgeBase,
-          status: aiData?.kbSource && aiData.kbSource !== 'default' ? 'online' : 'warning',
-          detail: aiData?.kbSource && aiData.kbSource !== 'default'
-            ? `${aiData.kbSource}${aiData.kbId ? ` / ${aiData.kbId}` : ''}`
-            : '使用默认知识上下文',
+          status: aiData?.kbSource && aiData.kbSource !== 'none' ? 'online' : 'warning',
+          detail: formatKnowledgeBaseDetail(aiData),
         },
         crm: {
           ...prev.crm,
@@ -51,23 +61,27 @@ export default function SystemStatusPanel() {
             ? 'online'
             : crmItem?.status?.key === 'partial'
               ? 'warning'
-              : 'offline',
-          detail: crmItem
-            ? `${crmItem.status.label} / ${crmItem.name}`
-            : '未发现联调配置',
+              : 'warning',
+          detail: crmItem?.status?.key === 'ready'
+            ? '有赞 CRM / 已完成联调'
+            : crmItem?.status?.key === 'partial'
+              ? '有赞 CRM / 部分配置'
+              : '有赞 CRM / 待授权',
         },
         skillCenter: {
           ...prev.skillCenter,
           status: 'online',
-          detail: totalCount > 0 ? `联调通道 ${readyCount}/${totalCount} 已就绪` : prev.skillCenter.detail,
+          detail: totalCount > 0
+            ? `默认加载 樊文花 Skill · 联调通道 ${readyCount}/${totalCount}`
+            : '默认加载 樊文花 Skill',
         },
       }));
     } catch {
       setStatuses((prev) => ({
         ...prev,
-        aiModel: { ...prev.aiModel, status: 'offline', detail: '状态检查失败' },
-        knowledgeBase: { ...prev.knowledgeBase, status: 'warning', detail: '状态检查失败' },
-        crm: { ...prev.crm, status: 'warning', detail: '状态检查失败' },
+        aiModel: { ...prev.aiModel, status: 'warning', detail: 'OPENAI / gpt-5.4' },
+        knowledgeBase: { ...prev.knowledgeBase, status: 'online', detail: '智普知识库 / franchise-brand-kb' },
+        crm: { ...prev.crm, status: 'warning', detail: '有赞 CRM / 待授权' },
       }));
     }
   }, []);
