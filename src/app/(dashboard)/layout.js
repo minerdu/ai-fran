@@ -6,6 +6,7 @@ import styles from './layout.module.css';
 import ChatPanel from '@/components/layout/ChatPanel';
 import CustomerDetail from '@/components/customer/CustomerDetail';
 import NotificationDropdown from '@/components/layout/NotificationDropdown';
+import AppSwitcher from '@/components/layout/AppSwitcher';
 import useStore from '@/lib/store';
 
 const TAB_META = {
@@ -96,7 +97,9 @@ export default function DashboardLayout({ children }) {
   };
 
   return (
-    <div className={styles.dashboardLayout}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+      <AppSwitcher />
+      <div className={styles.dashboardLayout} style={{ flex: 1, minHeight: 0 }}>
       <div className={styles.accountsBar}>
         <div className={styles.accountsTop}>
           <div
@@ -282,6 +285,7 @@ export default function DashboardLayout({ children }) {
             <CustomerDetail leadId={selectedLeadId} onClose={() => setShowDetailPanel(false)} />
           </div>
         )}
+      </div>
       </div>
     </div>
   );
