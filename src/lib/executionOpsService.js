@@ -22,6 +22,13 @@ function parseJson(value, fallback = null) {
   }
 }
 
+function sqlLiteral(value) {
+  if (value === null || value === undefined) return 'NULL';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'NULL';
+  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
 export async function ensureExecutionOpsStorage() {
   if (!opsStorageReadyPromise) {
     opsStorageReadyPromise = (async () => {
@@ -106,16 +113,16 @@ export async function syncLeadOperationalState() {
 
     for (const customer of customers) {
       const compositeScore = Number((((customer.intentScore || 0) * 0.45) + ((customer.valueScore || 0) * 0.35) + ((customer.satisfactionScore || 0) * 0.2)).toFixed(2));
-      await prisma.$executeRaw`
+      await prisma.$executeRawUnsafe(`
         INSERT INTO lead_scores (
           lead_id, intent_score, value_score, satisfaction_score, composite_score, source, updated_at
         ) VALUES (
-          ${customer.id},
-          ${customer.intentScore || 0},
-          ${customer.valueScore || 0},
-          ${customer.satisfactionScore || 0},
-          ${compositeScore},
-          ${'customer_sync'},
+          ${sqlLiteral(customer.id)},
+          ${sqlLiteral(customer.intentScore || 0)},
+          ${sqlLiteral(customer.valueScore || 0)},
+          ${sqlLiteral(customer.satisfactionScore || 0)},
+          ${sqlLiteral(compositeScore)},
+          ${sqlLiteral('customer_sync')},
           CURRENT_TIMESTAMP
         )
         ON CONFLICT(lead_id) DO UPDATE SET
@@ -125,23 +132,23 @@ export async function syncLeadOperationalState() {
           composite_score = excluded.composite_score,
           source = excluded.source,
           updated_at = CURRENT_TIMESTAMP
-      `;
+      `);
 
       const lastStage = latestStageMap[customer.id] || null;
       if (lastStage !== customer.lifecycleStatus) {
-        await prisma.$executeRaw`
+        await prisma.$executeRawUnsafe(`
           INSERT INTO lead_stage_history (
             id, lead_id, from_stage, to_stage, reason, actor, created_at
           ) VALUES (
-            ${`lsh_${randomUUID()}`},
-            ${customer.id},
-            ${lastStage},
-            ${customer.lifecycleStatus},
-            ${lastStage ? `线索状态从 ${lastStage} 进入 ${customer.lifecycleStatus}` : `初始化线索阶段 ${customer.lifecycleStatus}`},
-            ${'system'},
+            ${sqlLiteral(`lsh_${randomUUID()}`)},
+            ${sqlLiteral(customer.id)},
+            ${sqlLiteral(lastStage)},
+            ${sqlLiteral(customer.lifecycleStatus)},
+            ${sqlLiteral(lastStage ? `线索状态从 ${lastStage} 进入 ${customer.lifecycleStatus}` : `初始化线索阶段 ${customer.lifecycleStatus}`)},
+            ${sqlLiteral('system')},
             CURRENT_TIMESTAMP
           )
-        `;
+        `);
       }
     }
 
@@ -193,39 +200,39 @@ export async function getLeadStageHistory(leadId) {
 
 export async function recordLeadStageChange(leadId, fromStage, toStage, reason, actor = 'human') {
   await ensureExecutionOpsStorage();
-  await prisma.$executeRaw`
+  await prisma.$executeRawUnsafe(`
     INSERT INTO lead_stage_history (
       id, lead_id, from_stage, to_stage, reason, actor, created_at
     ) VALUES (
-      ${`lsh_${randomUUID()}`},
-      ${leadId},
-      ${fromStage},
-      ${toStage},
-      ${reason},
-      ${actor},
+      ${sqlLiteral(`lsh_${randomUUID()}`)},
+      ${sqlLiteral(leadId)},
+      ${sqlLiteral(fromStage)},
+      ${sqlLiteral(toStage)},
+      ${sqlLiteral(reason)},
+      ${sqlLiteral(actor)},
       CURRENT_TIMESTAMP
     )
-  `;
+  `);
 }
 
 export async function createDeliveryJob({ entityType, entityId, jobType, status = 'queued', artifactRef = null, payload = null }) {
   await ensureExecutionOpsStorage();
   const id = `job_${randomUUID()}`;
-  await prisma.$executeRaw`
+  await prisma.$executeRawUnsafe(`
     INSERT INTO delivery_jobs (
       id, entity_type, entity_id, job_type, status, artifact_ref, payload, created_at, updated_at
     ) VALUES (
-      ${id},
-      ${entityType},
-      ${entityId},
-      ${jobType},
-      ${status},
-      ${artifactRef},
-      ${JSON.stringify(payload || {})},
+      ${sqlLiteral(id)},
+      ${sqlLiteral(entityType)},
+      ${sqlLiteral(entityId)},
+      ${sqlLiteral(jobType)},
+      ${sqlLiteral(status)},
+      ${sqlLiteral(artifactRef)},
+      ${sqlLiteral(JSON.stringify(payload || {}))},
       CURRENT_TIMESTAMP,
       CURRENT_TIMESTAMP
     )
-  `;
+  `);
   return { id, entityType, entityId, jobType, status, artifactRef, payload: payload || {} };
 }
 
