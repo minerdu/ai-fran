@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import EmptyState from '@/components/common/EmptyState';
+import { apiFetch } from '@/lib/basePath';
 import styles from './page.module.css';
 
 const INTENT_META = {
@@ -32,6 +33,20 @@ function formatTime(value) {
   });
 }
 
+async function parseJsonResponse(response, fallbackMessage) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`${fallbackMessage}：服务返回了异常页面`);
+  }
+
+  const payload = await response.json();
+  if (!response.ok || !payload?.success && Object.prototype.hasOwnProperty.call(payload || {}, 'success')) {
+    throw new Error(payload?.message || fallbackMessage);
+  }
+
+  return payload;
+}
+
 export default function CommandCenterPage() {
   const [aiCommands, setAiCommands] = useState([]);
   const [commandInput, setCommandInput] = useState('');
@@ -41,8 +56,8 @@ export default function CommandCenterPage() {
   const [quickCommands, setQuickCommands] = useState([]);
 
   const loadCommands = useCallback(() => {
-    fetch('/api/reports/aggregate', { cache: 'no-store' })
-      .then((response) => response.json())
+    apiFetch('/api/reports/aggregate', { cache: 'no-store' })
+      .then((response) => parseJsonResponse(response, '加载指令历史失败'))
       .then((payload) => setAiCommands(Array.isArray(payload.latestCommands) ? payload.latestCommands : []))
       .catch(() => setAiCommands([]));
   }, []);
@@ -52,8 +67,8 @@ export default function CommandCenterPage() {
   }, [loadCommands]);
 
   useEffect(() => {
-    fetch('/api/ai-command/catalog', { cache: 'no-store' })
-      .then((response) => response.json())
+    apiFetch('/api/ai-command/catalog', { cache: 'no-store' })
+      .then((response) => parseJsonResponse(response, '加载快捷指令失败'))
       .then((payload) => setQuickCommands(Array.isArray(payload.quickActions) ? payload.quickActions : []))
       .catch(() => setQuickCommands([]));
   }, []);
@@ -62,7 +77,7 @@ export default function CommandCenterPage() {
     if (!commandInput.trim() || submitting) return;
     setSubmitting(true);
     try {
-      const response = await fetch('/api/ai-command', {
+      const response = await apiFetch('/api/ai-command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -72,10 +87,7 @@ export default function CommandCenterPage() {
           brand_id: 'brand_default',
         }),
       });
-      const payload = await response.json();
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message || '指令执行失败');
-      }
+      const payload = await parseJsonResponse(response, '指令执行失败');
       if (payload.command) {
         setLatestResult(payload.command);
         setAiCommands((current) => [payload.command, ...current.filter((item) => item.id !== payload.command.id)]);
