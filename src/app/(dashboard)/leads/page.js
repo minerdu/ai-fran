@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import useStore from '@/lib/store';
 import LeadBatchActionBar from '@/components/leads/LeadBatchActionBar';
 import WecomGroupCard from '@/components/leads/WecomGroupCard';
+import { apiFetch } from '@/lib/basePath';
 import styles from './page.module.css';
 
 const STAGE_LABELS = {
@@ -47,7 +48,7 @@ export default function LeadsPage() {
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
   useEffect(() => {
-    fetch('/api/customers/groups', { cache: 'no-store' })
+    apiFetch('/api/customers/groups', { cache: 'no-store' })
       .then((response) => response.json())
       .then((data) => setGroupCards(Array.isArray(data) ? data : []))
       .catch(() => setGroupCards([]));
@@ -130,7 +131,7 @@ export default function LeadsPage() {
   const syncBatchAction = async (action) => {
     const ids = Array.from(selectedIds);
     if (!ids.length) return;
-    const response = await fetch('/api/customers', {
+    const response = await apiFetch('/api/customers', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids, action }),
