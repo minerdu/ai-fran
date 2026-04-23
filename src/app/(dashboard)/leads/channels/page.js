@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/basePath';
 import styles from '../page.module.css';
 
 const CHANNEL_TABS = ['全部', '企微好友', '招商群', '资料外发'];
@@ -45,7 +46,7 @@ export default function LeadsChannelsPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    fetch('/api/customers/groups', { cache: 'no-store' })
+    apiFetch('/api/customers/groups', { cache: 'no-store' })
       .then(r => r.json())
       .then(data => { if (Array.isArray(data) && data.length) setGroups(data); })
       .catch(() => {});

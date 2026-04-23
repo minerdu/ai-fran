@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import styles from './layout.module.css';
 import ChatPanel from '@/components/layout/ChatPanel';
@@ -60,6 +60,23 @@ export default function DashboardLayout({ children }) {
   
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [showAIPanelMobile, setShowAIPanelMobile] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const media = window.matchMedia('(max-width: 768px)');
+    const sync = () => setIsMobileViewport(media.matches);
+    sync();
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', sync);
+      return () => media.removeEventListener('change', sync);
+    }
+
+    media.addListener(sync);
+    return () => media.removeListener(sync);
+  }, []);
 
   const baseTab = useMemo(() => resolveCurrentTab(pathname), [pathname]);
   const currentTab = showAIPanelMobile ? 'ai' : baseTab;
@@ -83,6 +100,7 @@ export default function DashboardLayout({ children }) {
   }, [selectedLeadId, allMessages]);
 
   const showRightPanelMobile = Boolean(selectedLeadId) || currentTab === 'ai';
+  const hideMobileAiTopBar = isMobileViewport && currentTab === 'ai' && !selectedLead;
 
   const handleNavigate = (route) => {
     clearSelection();
@@ -95,6 +113,73 @@ export default function DashboardLayout({ children }) {
     setActiveWorkspace(workspace);
     handleNavigate('/leads');
   };
+
+  const renderBottomNav = (extraClassName = '') => (
+    <nav className={`${styles.bottomNav} ${extraClassName}`.trim()}>
+      <button
+        onClick={() => handleNavigate('/leads')}
+        className={`${styles.navItem} ${currentTab === 'leads' ? styles.active : ''}`}
+      >
+        <span className={styles.navIcon} style={{ color: '#f43f5e', opacity: currentTab === 'leads' ? 1 : 0.6 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </span>
+        <span className={styles.navLabel} style={{ color: '#f43f5e', opacity: currentTab === 'leads' ? 1 : 0.6 }}>线索</span>
+      </button>
+      <button
+        onClick={() => handleNavigate('/workflow')}
+        className={`${styles.navItem} ${currentTab === 'workflow' ? styles.active : ''}`}
+      >
+        <span className={styles.navIcon} style={{ color: '#0ea5e9', opacity: currentTab === 'workflow' ? 1 : 0.6 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><path d="M6.5 10v4h7"/>
+          </svg>
+        </span>
+        <span className={styles.navLabel} style={{ color: '#0ea5e9', opacity: currentTab === 'workflow' ? 1 : 0.6 }}>工作流</span>
+      </button>
+      <button
+        onClick={() => {
+          if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+            setShowAIPanelMobile(true);
+            clearSelection();
+          } else {
+            handleNavigate('/leads');
+          }
+        }}
+        className={`${styles.navItem} ${currentTab === 'ai' ? styles.active : ''}`}
+      >
+        <span className={styles.navIcon} style={{ color: '#2563eb', opacity: currentTab === 'ai' ? 1 : 0.6 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+          </svg>
+        </span>
+        <span className={styles.navLabel} style={{ color: '#2563eb', opacity: currentTab === 'ai' ? 1 : 0.6 }}>AI招商</span>
+      </button>
+      <button
+        onClick={() => handleNavigate('/approvals')}
+        className={`${styles.navItem} ${currentTab === 'approvals' ? styles.active : ''}`}
+      >
+        <span className={styles.navIcon} style={{ color: '#84cc16', opacity: currentTab === 'approvals' ? 1 : 0.6 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/>
+          </svg>
+        </span>
+        <span className={styles.navLabel} style={{ color: '#84cc16', opacity: currentTab === 'approvals' ? 1 : 0.6 }}>审批</span>
+      </button>
+      <button
+        onClick={() => handleNavigate('/me')}
+        className={`${styles.navItem} ${currentTab === 'me' ? styles.active : ''}`}
+      >
+        <span className={styles.navIcon} style={{ color: '#8b5cf6', opacity: currentTab === 'me' ? 1 : 0.6 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
+        <span className={styles.navLabel} style={{ color: '#8b5cf6', opacity: currentTab === 'me' ? 1 : 0.6 }}>我的</span>
+      </button>
+    </nav>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
@@ -164,110 +249,49 @@ export default function DashboardLayout({ children }) {
 
           <div className={styles.leftPanelContent}>{children}</div>
 
-          <nav className={styles.bottomNav}>
-            <button
-              onClick={() => handleNavigate('/leads')}
-              className={`${styles.navItem} ${currentTab === 'leads' ? styles.active : ''}`}
-            >
-              <span className={styles.navIcon} style={{ color: '#f43f5e', opacity: currentTab === 'leads' ? 1 : 0.6 }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                </svg>
-              </span>
-              <span className={styles.navLabel} style={{ color: '#f43f5e', opacity: currentTab === 'leads' ? 1 : 0.6 }}>线索</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/workflow')}
-              className={`${styles.navItem} ${currentTab === 'workflow' ? styles.active : ''}`}
-            >
-              <span className={styles.navIcon} style={{ color: '#0ea5e9', opacity: currentTab === 'workflow' ? 1 : 0.6 }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><path d="M6.5 10v4h7"/>
-                </svg>
-              </span>
-              <span className={styles.navLabel} style={{ color: '#0ea5e9', opacity: currentTab === 'workflow' ? 1 : 0.6 }}>工作流</span>
-            </button>
-            <button
-              onClick={() => {
-                if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-                  setShowAIPanelMobile(true);
-                  clearSelection();
-                } else {
-                  handleNavigate('/leads');
-                }
-              }}
-              className={`${styles.navItem} ${currentTab === 'ai' ? styles.active : ''}`}
-            >
-              <span className={styles.navIcon} style={{ color: '#2563eb', opacity: currentTab === 'ai' ? 1 : 0.6 }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
-                </svg>
-              </span>
-              <span className={styles.navLabel} style={{ color: '#2563eb', opacity: currentTab === 'ai' ? 1 : 0.6 }}>AI招商</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/approvals')}
-              className={`${styles.navItem} ${currentTab === 'approvals' ? styles.active : ''}`}
-            >
-              <span className={styles.navIcon} style={{ color: '#84cc16', opacity: currentTab === 'approvals' ? 1 : 0.6 }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/>
-                </svg>
-              </span>
-              <span className={styles.navLabel} style={{ color: '#84cc16', opacity: currentTab === 'approvals' ? 1 : 0.6 }}>审批</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('/me')}
-              className={`${styles.navItem} ${currentTab === 'me' ? styles.active : ''}`}
-            >
-              <span className={styles.navIcon} style={{ color: '#8b5cf6', opacity: currentTab === 'me' ? 1 : 0.6 }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                </svg>
-              </span>
-              <span className={styles.navLabel} style={{ color: '#8b5cf6', opacity: currentTab === 'me' ? 1 : 0.6 }}>我的</span>
-            </button>
-          </nav>
+          {!isMobileViewport ? renderBottomNav(styles.panelBottomNav) : null}
         </div>
 
         <div className={`${styles.rightPanel} ${showRightPanelMobile ? styles.rightPanelVisibleMobile : ''}`}>
-          <div className={styles.rightTopBar}>
-            {selectedLead ? (
-              <>
-                <button className={styles.backBtnIOS} onClick={() => { clearSelection(); setShowDetailPanel(false); }}>
-                  <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                  <span className={styles.backBtnText}>返回</span>
-                </button>
-                <div className={styles.rightTopBarCustomer}>
-                  <span className={styles.rightTopBarTitle}>{selectedLead.name}</span>
-                  <span className={styles.rightTopBarSub}>{selectedLead.company} · {selectedLead.city}</span>
-                </div>
-                <button className={styles.profileBtn} title="线索画像" onClick={() => setShowDetailPanel(!showDetailPanel)}>
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                  <span className={styles.profileBtnText}>线索画像</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <div style={{ width: 44 }}>
-                  {(showAIPanelMobile || currentTab === 'ai') && (
-                    <button className={`${styles.backBtnIOS} ${styles.backBtnMobileOnly}`} onClick={() => {
-                      setShowAIPanelMobile(false);
-                      if (pathname === '/ai') router.push('/leads');
-                    }}>
-                      <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                      <span className={styles.backBtnText}>返回</span>
-                    </button>
-                  )}
-                </div>
-                <span className={styles.rightTopBarTitle}>{currentTab === 'ai' ? 'AI招商中枢' : 'AI智能招商中心'}</span>
-                <div style={{ width: 44 }} />
-              </>
-            )}
-          </div>
+          {!hideMobileAiTopBar ? (
+            <div className={styles.rightTopBar}>
+              {selectedLead ? (
+                <>
+                  <button className={styles.backBtnIOS} onClick={() => { clearSelection(); setShowDetailPanel(false); }}>
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <span className={styles.backBtnText}>返回</span>
+                  </button>
+                  <div className={styles.rightTopBarCustomer}>
+                    <span className={styles.rightTopBarTitle}>{selectedLead.name}</span>
+                    <span className={styles.rightTopBarSub}>{selectedLead.company} · {selectedLead.city}</span>
+                  </div>
+                  <button className={styles.profileBtn} title="线索画像" onClick={() => setShowDetailPanel(!showDetailPanel)}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span className={styles.profileBtnText}>线索画像</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div style={{ width: 44 }}>
+                    {(showAIPanelMobile || currentTab === 'ai') && (
+                      <button className={`${styles.backBtnIOS} ${styles.backBtnMobileOnly}`} onClick={() => {
+                        setShowAIPanelMobile(false);
+                        if (pathname === '/ai') router.push('/leads');
+                      }}>
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        <span className={styles.backBtnText}>返回</span>
+                      </button>
+                    )}
+                  </div>
+                  <span className={styles.rightTopBarTitle}>{currentTab === 'ai' ? 'AI招商中枢' : 'AI智能招商中心'}</span>
+                  <div style={{ width: 44 }} />
+                </>
+              )}
+            </div>
+          ) : null}
           <ChatPanel
             key={selectedLeadId || `command-${currentTab}`}
             leadName={selectedLead?.name}
@@ -286,6 +310,7 @@ export default function DashboardLayout({ children }) {
           </div>
         )}
       </div>
+      {isMobileViewport ? renderBottomNav(styles.mobileBottomNav) : null}
       </div>
     </div>
   );

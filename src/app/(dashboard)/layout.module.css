@@ -541,6 +541,14 @@
   flex-shrink: 0;
 }
 
+.panelBottomNav {
+  display: flex;
+}
+
+.mobileBottomNav {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .bottomNav {
     left: 0;
@@ -671,6 +679,7 @@
     width: 100%;
     max-width: 100%;
     flex: 1;
+    padding-bottom: calc(var(--bottombar-height) + env(safe-area-inset-bottom, 0));
   }
 
   /* Right panel hidden by default on mobile */
@@ -678,6 +687,7 @@
     display: none;
     width: 100%;
     max-width: 100%;
+    padding-bottom: calc(var(--bottombar-height) + env(safe-area-inset-bottom, 0));
   }
 
   /* When customer is selected: hide left, show right */
@@ -688,6 +698,24 @@
   .rightPanelVisibleMobile {
     display: flex;
     flex: 1;
+  }
+
+  .rightTopBarMobileHidden {
+    display: none;
+  }
+
+  .panelBottomNav {
+    display: none;
+  }
+
+  .mobileBottomNav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 320;
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
   }
 
   /* Detail panel full screen on mobile */

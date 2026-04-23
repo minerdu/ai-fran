@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { mockLeads, mockMessages, mockApprovals, mockAgentRuns, mockEvents, mockPlaybooks, mockSkills, mockAiCommands, mockTimelines, mockFranchiseDocs } from './franchiseData';
+import { apiFetch } from './basePath';
 
 const useStore = create((set, get) => ({
   // --- Workspace ---
@@ -19,7 +20,7 @@ const useStore = create((set, get) => ({
   fetchLeads: async () => {
     set({ isLoadingLeads: true });
     try {
-      const response = await fetch('/api/customers', { cache: 'no-store' });
+      const response = await apiFetch('/api/customers', { cache: 'no-store' });
       const data = await response.json();
       set({ leads: Array.isArray(data) ? data : mockLeads, isLoadingLeads: false });
     } catch (error) {
@@ -30,7 +31,7 @@ const useStore = create((set, get) => ({
   fetchMessages: async (leadId) => {
     set({ isLoadingMessages: true });
     try {
-      const response = await fetch(`/api/messages?leadId=${leadId}&all=true`, { cache: 'no-store' });
+      const response = await apiFetch(`/api/messages?leadId=${leadId}&all=true`, { cache: 'no-store' });
       const data = await response.json();
       set((state) => ({
         allMessages: { ...state.allMessages, [leadId]: Array.isArray(data) && data.length > 0 ? data : mockMessages[leadId] || [] },
@@ -82,7 +83,7 @@ const useStore = create((set, get) => ({
   fetchApprovals: async () => {
     set({ isLoadingApprovals: true });
     try {
-      const response = await fetch('/api/approvals', { cache: 'no-store' });
+      const response = await apiFetch('/api/approvals', { cache: 'no-store' });
       const data = await response.json();
       set({ approvals: Array.isArray(data) ? data : mockApprovals, isLoadingApprovals: false });
     } catch (error) {
@@ -100,7 +101,7 @@ const useStore = create((set, get) => ({
   refreshWorkflow: async () => {
     set({ isLoadingWorkflow: true });
     try {
-      const response = await fetch('/api/tasks', { cache: 'no-store' });
+      const response = await apiFetch('/api/tasks', { cache: 'no-store' });
       const data = await response.json();
       set({ workflowTasks: Array.isArray(data) ? data : [], isLoadingWorkflow: false });
     } catch (error) {
