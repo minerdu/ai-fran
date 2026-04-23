@@ -15,6 +15,86 @@ const STAGE_COLORS = {
   rejected: '#ff4d4f',
 };
 
+const COMMAND_HISTORY_STORAGE_KEY = 'fran-command-center-history-v2';
+
+const THINKING_STEPS = [
+  {
+    key: 'intent',
+    icon: '◎',
+    title: '识别招商意图',
+    detail: '解析自然语言里的动作目标、线索类型和业务边界',
+  },
+  {
+    key: 'audience',
+    icon: '◌',
+    title: '筛选目标线索',
+    detail: '匹配高意向人群、沉默线索与当前阶段的可执行对象',
+  },
+  {
+    key: 'rules',
+    icon: '◈',
+    title: '校验规则与审批',
+    detail: '检查红线、资料外发、审批要求与可用 Skill / CRM 配置',
+  },
+  {
+    key: 'workflow',
+    icon: '▷',
+    title: '编排执行工作流',
+    detail: '生成任务、安排触达节奏，并返回可追踪的执行结果',
+  },
+];
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function formatMessageTime(value) {
+  const d = new Date(value);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+  const isSameYear = d.getFullYear() === now.getFullYear();
+  const time = d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return `今天 ${time}`;
+  if (isYesterday) return `昨天 ${time}`;
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  if (isSameYear) return `${month}/${day} ${time}`;
+  return `${d.getFullYear()}/${month}/${day} ${time}`;
+}
+
+function buildCommandMessagesFromAggregate(commands) {
+  if (!Array.isArray(commands)) return [];
+
+  return commands.flatMap((command) => {
+    const userMessage = {
+      id: `history-user-${command.id}`,
+      role: 'user',
+      content: command.input,
+      time: command.createdAt,
+      historyId: command.id,
+      source: 'aggregate',
+    };
+
+    const systemMessage = {
+      id: `history-system-${command.id}`,
+      role: 'system',
+      type: command.status === 'failed' ? 'error' : 'text',
+      content: command.resultSummary || '已执行',
+      time: command.createdAt,
+      historyId: command.id,
+      source: 'aggregate',
+      status: command.status,
+      linkedObjects: command.linkedObjects || [],
+      execution: command.execution || null,
+    };
+
+    return [userMessage, systemMessage];
+  });
+}
+
 async function parseApiResponse(res, fallbackMessage) {
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
@@ -45,6 +125,8 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
   // Command center mode (when no lead selected)
   const [commandMessages, setCommandMessages] = useState([]);
   const [isProcessingCommand, setIsProcessingCommand] = useState(false);
+  const [thinkingStepIndex, setThinkingStepIndex] = useState(0);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const messagesEndRef = useRef(null);
   const prevLeadIdRef = useRef(resolvedLeadId);
   const toast = useToast();
@@ -82,13 +164,64 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
     }
   }, [resolvedLeadId, initialMessages]);
 
+  useEffect(() => {
+    if (resolvedLeadId || typeof window === 'undefined') return;
+
+    try {
+      const saved = window.localStorage.getItem(COMMAND_HISTORY_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCommandMessages(parsed);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to restore command history:', error);
+    }
+
+    apiFetch('/api/reports/aggregate', { cache: 'no-store' })
+      .then((res) => parseApiResponse(res, '加载历史指令失败'))
+      .then((payload) => {
+        const hydrated = buildCommandMessagesFromAggregate(payload?.latestCommands);
+        if (hydrated.length > 0) {
+          setCommandMessages(hydrated);
+        }
+      })
+      .catch(() => {});
+  }, [resolvedLeadId]);
+
+  useEffect(() => {
+    if (resolvedLeadId || typeof window === 'undefined') return;
+
+    try {
+      window.localStorage.setItem(COMMAND_HISTORY_STORAGE_KEY, JSON.stringify(commandMessages));
+    } catch (error) {
+      console.error('Failed to persist command history:', error);
+    }
+  }, [resolvedLeadId, commandMessages]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, commandMessages, isProcessingCommand, thinkingStepIndex]);
+
+  useEffect(() => {
+    if (!isProcessingCommand) {
+      setThinkingStepIndex(0);
+      return undefined;
+    }
+
+    setThinkingStepIndex(0);
+    const timer = window.setInterval(() => {
+      setThinkingStepIndex((current) => (current < THINKING_STEPS.length - 1 ? current + 1 : current));
+    }, 700);
+
+    return () => window.clearInterval(timer);
+  }, [isProcessingCommand]);
 
   // Poll for new messages (to pick up AI replies)
   const pollForReplies = async (leadId, knownCount) => {
@@ -142,14 +275,17 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
   const handleCommandSend = async () => {
     if (!inputValue.trim()) return;
     const command = inputValue;
+    const commandTime = new Date().toISOString();
+    const commandId = `cmd-${Date.now()}`;
     setCommandMessages(prev => [...prev, {
-      id: `cmd-${Date.now()}`,
+      id: commandId,
       role: 'user',
       content: command,
-      time: new Date().toISOString(),
+      time: commandTime,
     }]);
     setInputValue('');
     setIsProcessingCommand(true);
+    const startedAt = Date.now();
     try {
       const res = await apiFetch('/api/ai-command', {
         method: 'POST',
@@ -157,6 +293,10 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
         body: JSON.stringify({ command }),
       });
       const data = await parseApiResponse(res, 'AI 指令执行失败');
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < 1800) {
+        await sleep(1800 - elapsed);
+      }
       if (data.success && (data.type === 'workflow' || data.type === 'sop_workflow')) {
         setCommandMessages(prev => [...prev, {
           id: `result-${Date.now()}`,
@@ -164,6 +304,7 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
           type: data.type === 'sop_workflow' ? 'sop_workflow' : 'workflow',
           data: data,
           time: new Date().toISOString(),
+          historyId: commandId,
         }]);
         toast.success(data.summary);
       } else if (data.success && data.type === 'text') {
@@ -173,6 +314,7 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
           type: 'text',
           content: data.message,
           time: new Date().toISOString(),
+          historyId: commandId,
         }]);
       } else {
         setCommandMessages(prev => [...prev, {
@@ -181,19 +323,33 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
           type: 'error',
           content: data.message || '执行失败',
           time: new Date().toISOString(),
+          historyId: commandId,
         }]);
       }
     } catch (e) {
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < 1200) {
+        await sleep(1200 - elapsed);
+      }
       setCommandMessages(prev => [...prev, {
         id: `err-${Date.now()}`,
         role: 'system',
         type: 'error',
         content: `网络错误: ${e.message}`,
         time: new Date().toISOString(),
+        historyId: commandId,
       }]);
     } finally {
       setIsProcessingCommand(false);
     }
+  };
+
+  const focusCommandRecord = (recordId) => {
+    setShowHistoryPanel(false);
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(`command-record-${recordId}`);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
   };
 
   const handleKeyDown = (e) => {
@@ -323,6 +479,45 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
     }
   }, [resolvedLeadId]);
 
+  const commandHistory = [];
+  for (let index = 0; index < commandMessages.length; index += 1) {
+    const current = commandMessages[index];
+    if (current.role !== 'user') continue;
+
+    let response = null;
+    for (let cursor = index + 1; cursor < commandMessages.length; cursor += 1) {
+      if (commandMessages[cursor].role === 'system') {
+        response = commandMessages[cursor];
+        break;
+      }
+      if (commandMessages[cursor].role === 'user') {
+        break;
+      }
+    }
+
+    commandHistory.unshift({
+      id: current.id,
+      anchorId: current.id,
+      command: current.content,
+      time: current.time,
+      summary: response?.data?.summary || response?.content || '等待 AI 返回执行结果',
+      status: response?.type === 'error'
+        ? '异常'
+        : response?.data?.plan?.needApproval
+          ? '待审批'
+          : response
+            ? '已生成'
+            : '处理中',
+      statusTone: response?.type === 'error'
+        ? 'danger'
+        : response?.data?.plan?.needApproval
+          ? 'warning'
+          : response
+            ? 'success'
+            : 'neutral',
+    });
+  }
+
   // ==========================================
   // 招商指挥中心模式（未选择线索时）— 统一布局
   // ==========================================
@@ -362,33 +557,32 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
 
         {/* Expanded Journey Details */}
         {journeyExpanded && journeyStats && (
-          <div style={{ padding: '12px 16px', background: 'var(--color-bg-section)', borderBottom: '1px solid var(--color-border-light)', flexShrink: 0 }}>
-            {/* Mini Stats Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
-              <div style={{ padding: '10px', background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: '#2563EB' }}>{journeyStats.totalJourney}</div>
-                <div style={{ fontSize: '10px', color: '#3B82F6' }}>招商任务</div>
+          <div className={styles.journeyPanel}>
+            <div className={styles.journeyStatsGrid}>
+              <div className={`${styles.journeyStatCard} ${styles.journeyStatBlue}`}>
+                <div className={styles.journeyStatValue}>{journeyStats.totalJourney}</div>
+                <div className={styles.journeyStatLabel}>招商任务</div>
               </div>
-              <div style={{ padding: '10px', background: 'linear-gradient(135deg, #E6F4FF, #D6E4FF)', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: '#1890ff' }}>{journeyStats.todayCount}</div>
-                <div style={{ fontSize: '10px', color: '#597ef7' }}>今日触达</div>
+              <div className={`${styles.journeyStatCard} ${styles.journeyStatCyan}`}>
+                <div className={styles.journeyStatValue}>{journeyStats.todayCount}</div>
+                <div className={styles.journeyStatLabel}>今日触达</div>
               </div>
-              <div style={{ padding: '10px', background: 'linear-gradient(135deg, #FFF7E6, #FFE7BA)', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: '#FA8C16' }}>{journeyStats.executedRate}%</div>
-                <div style={{ fontSize: '10px', color: '#d48806' }}>推进完成率</div>
+              <div className={`${styles.journeyStatCard} ${styles.journeyStatAmber}`}>
+                <div className={styles.journeyStatValue}>{journeyStats.executedRate}%</div>
+                <div className={styles.journeyStatLabel}>推进完成率</div>
               </div>
             </div>
-            {/* Journey Stages - Horizontal Scroll */}
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+            <div className={styles.journeyStageGrid}>
               {journeyStats.stages.map((stage, i) => (
-                <div key={i} style={{
-                  minWidth: '72px', padding: '8px 6px', background: 'var(--color-bg-card)',
-                  borderRadius: '10px', textAlign: 'center', border: '1px solid var(--color-border-light)',
-                  flexShrink: 0,
-                }}>
-                  <div style={{ fontSize: '18px' }}>{stage.icon}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--color-text-secondary)', marginTop: '2px', whiteSpace: 'nowrap' }}>{stage.label}</div>
-                  <div style={{ fontSize: '14px', fontWeight: '700', color: stage.count > 0 ? '#2563EB' : 'var(--color-text-tertiary)', marginTop: '2px' }}>{stage.count}</div>
+                <div key={i} className={styles.journeyStageCard}>
+                  <div className={styles.journeyStageIcon}>{stage.icon}</div>
+                  <div className={styles.journeyStageLabel}>{stage.label}</div>
+                  <div
+                    className={styles.journeyStageValue}
+                    style={{ color: stage.count > 0 ? '#2563EB' : 'var(--color-text-tertiary)' }}
+                  >
+                    {stage.count}
+                  </div>
                 </div>
               ))}
             </div>
@@ -397,11 +591,34 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
 
         {/* ===== MIDDLE: Command Messages Area ===== */}
         <div className={styles.messagesArea}>
+          <div className={styles.commandCenterToolbar}>
+            <div className={styles.commandCenterMeta}>
+              <span className={styles.commandCenterBadge}>AI 指令台</span>
+              <span className={styles.commandCenterHint}>自然语言招商指令、审批和执行结果都在这里沉淀</span>
+            </div>
+            <button
+              type="button"
+              className={styles.historyTrigger}
+              onClick={() => setShowHistoryPanel(true)}
+              disabled={commandHistory.length === 0}
+            >
+              历史指令
+              <span className={styles.historyCount}>{commandHistory.length}</span>
+            </button>
+          </div>
           {commandMessages.length === 0 ? (
             <div className={styles.emptyChat}>
               <div className={styles.emptyChatIcon}>🎯</div>
               <h3 className={styles.emptyChatTitle}>AI智能招商中心</h3>
               <p className={styles.emptyChatDesc}>用自然语言下达招商指令，AI 将自动解析并执行</p>
+              <button
+                type="button"
+                className={styles.historyPreviewBtn}
+                onClick={() => setShowHistoryPanel(true)}
+                disabled={commandHistory.length === 0}
+              >
+                查看历史指令记录
+              </button>
               <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '320px' }}>
                 {[
                   '📑 给高意向线索发送品牌招商手册',
@@ -411,6 +628,7 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
                 ].map((hint, i) => (
                   <button
                     key={i}
+                    type="button"
                     onClick={() => { setInputValue(hint.substring(2).trim()); }}
                     style={{
                       padding: '10px 14px', background: 'var(--color-bg-card)',
@@ -427,7 +645,11 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
           ) : (
             <div className={styles.messagesList}>
               {commandMessages.map((msg) => (
-                <div key={msg.id} className={`${styles.messageWrapper} ${msg.role === 'user' ? styles.outbound : styles.inbound} animate-fadeInUp`}>
+                <div
+                  key={msg.id}
+                  id={msg.role === 'user' ? `command-record-${msg.id}` : undefined}
+                  className={`${styles.messageWrapper} ${msg.role === 'user' ? styles.outbound : styles.inbound} animate-fadeInUp`}
+                >
                   {msg.role === 'system' && (
                     <div className={styles.msgAvatar} style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}>🤖</div>
                   )}
@@ -499,27 +721,17 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
                           <span>AI 回复</span>
                         </div>
                         {msg.content}
+                        {msg.execution?.pendingManual ? (
+                          <div className={styles.aggregateStatusRow}>
+                            <span className={styles.aggregateStatusChip}>待审批 {msg.execution.pendingManual}</span>
+                          </div>
+                        ) : null}
                       </div>
                     ) : (
                       <div className={styles.messageContent}>{msg.content}</div>
                     )}
                     <div className={styles.messageTime}>
-                      {(() => {
-                        const d = new Date(msg.time);
-                        const now = new Date();
-                        const isToday = d.toDateString() === now.toDateString();
-                        const yesterday = new Date(now);
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const isYesterday = d.toDateString() === yesterday.toDateString();
-                        const isSameYear = d.getFullYear() === now.getFullYear();
-                        const time = d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-                        if (isToday) return `今天 ${time}`;
-                        if (isYesterday) return `昨天 ${time}`;
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        if (isSameYear) return `${month}/${day} ${time}`;
-                        return `${d.getFullYear()}/${month}/${day} ${time}`;
-                      })()}
+                      {formatMessageTime(msg.time)}
                     </div>
                   </div>
                   {msg.role === 'user' && (
@@ -530,13 +742,44 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
               {isProcessingCommand && (
                 <div className={`${styles.messageWrapper} ${styles.inbound} animate-fadeIn`}>
                   <div className={styles.msgAvatar} style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}>🤖</div>
-                  <div className={styles.messageBubble}>
-                    <div className={styles.aiLabel}>
-                      <span className={styles.aiIcon}>⚡</span>
-                      <span>AI 正在解析指令并生成工作流...</span>
+                  <div className={`${styles.messageBubble} ${styles.thinkingBubble}`}>
+                    <div className={styles.thinkingHeader}>
+                      <div className={styles.aiLabel}>
+                        <span className={styles.aiIcon}>⚡</span>
+                        <span>AI 正在思考并编排招商动作</span>
+                      </div>
+                      <span className={styles.thinkingSignal}>运行中</span>
                     </div>
-                    <div className={styles.typingDots}>
-                      <span></span><span></span><span></span>
+                    <div className={styles.thinkingProgress}>
+                      <span
+                        className={styles.thinkingProgressBar}
+                        style={{ width: `${((thinkingStepIndex + 1) / THINKING_STEPS.length) * 100}%` }}
+                      />
+                    </div>
+                    <div className={styles.thinkingTimeline}>
+                      {THINKING_STEPS.map((step, index) => {
+                        const isDone = index < thinkingStepIndex;
+                        const isActive = index === thinkingStepIndex;
+                        return (
+                          <div
+                            key={step.key}
+                            className={`${styles.thinkingStep} ${isDone ? styles.thinkingStepDone : ''} ${isActive ? styles.thinkingStepActive : ''}`}
+                          >
+                            <div className={styles.thinkingStepIcon}>{isDone ? '✓' : step.icon}</div>
+                            <div className={styles.thinkingStepBody}>
+                              <div className={styles.thinkingStepTitle}>{step.title}</div>
+                              <div className={styles.thinkingStepDetail}>{step.detail}</div>
+                            </div>
+                            {isActive ? <div className={styles.thinkingPulse} /> : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className={styles.thinkingFooter}>
+                      <div className={styles.typingDots}>
+                        <span></span><span></span><span></span>
+                      </div>
+                      <span>正在生成可审批、可执行、可追踪的招商工作流</span>
                     </div>
                   </div>
                 </div>
@@ -545,7 +788,42 @@ export default function ChatPanel({ leadName, leadId, initialMessages, ...legacy
             </div>
           )}
         </div>
-        {/* ===== BOTTOM: Command Input (always visible) ===== */}
+        {showHistoryPanel && (
+          <div className={styles.historyOverlay} onClick={() => setShowHistoryPanel(false)}>
+            <div className={styles.historyDrawer} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.historyDrawerHeader}>
+                <div>
+                  <div className={styles.historyDrawerTitle}>历史指令记录</div>
+                  <div className={styles.historyDrawerDesc}>点击任一指令即可跳回对应对话位置</div>
+                </div>
+                <button type="button" className={styles.modalClose} onClick={() => setShowHistoryPanel(false)}>✕</button>
+              </div>
+              <div className={styles.historyList}>
+                {commandHistory.length === 0 ? (
+                  <div className={styles.historyEmpty}>还没有历史指令，先发起一条自然语言招商指令。</div>
+                ) : commandHistory.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className={styles.historyItem}
+                    onClick={() => focusCommandRecord(entry.anchorId)}
+                  >
+                    <div className={styles.historyItemTop}>
+                      <span className={styles.historyItemCommand}>{entry.command}</span>
+                      <span className={`${styles.historyStatus} ${styles[`historyStatus${entry.statusTone.charAt(0).toUpperCase()}${entry.statusTone.slice(1)}`]}`}>
+                        {entry.status}
+                      </span>
+                    </div>
+                    <div className={styles.historyItemSummary}>{entry.summary}</div>
+                    <div className={styles.historyItemTime}>{formatMessageTime(entry.time)}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== BOTTOM: Command Input (always visible) ===== */}
         <div className={styles.inputAreaWrapper}>
           <div className={styles.inputArea}>
             <div className={styles.inputWrapper}>
