@@ -7,7 +7,11 @@ export default async function SettingsPage({ searchParams }) {
   const tab = resolvedSearchParams?.tab;
 
   if (tab === 'report' || tab === 'reports') {
-    redirect('/reports');
+    redirect('/settings/report');
+  }
+
+  if (tab === 'redline' || tab === 'redLineRules') {
+    redirect('/settings/redline');
   }
 
   if (tab) {

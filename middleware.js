@@ -8,7 +8,11 @@ export function middleware(request) {
     const tab = nextUrl.searchParams.get('tab');
 
     if (tab === 'report' || tab === 'reports') {
-      return NextResponse.redirect(new URL('/fran/reports', request.url));
+      return NextResponse.redirect(new URL('/fran/settings/report', request.url));
+    }
+
+    if (tab === 'redline' || tab === 'redLineRules') {
+      return NextResponse.redirect(new URL('/fran/settings/redline', request.url));
     }
 
     if (tab) {

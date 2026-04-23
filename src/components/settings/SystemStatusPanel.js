@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import styles from './SystemStatusPanel.module.css';
 
 const KB_LABELS = {
-  zhipu: '智普知识库',
+  zhipu: '智谱知识库',
   dify: 'Dify 知识库',
   custom: '指定知识库',
   default: '默认知识上下文',
@@ -25,9 +25,9 @@ function formatKnowledgeBaseDetail(aiData) {
 export default function SystemStatusPanel() {
   const [statuses, setStatuses] = useState({
     aiModel: { status: 'warning', label: 'AI 大模型', detail: 'OPENAI / gpt-5.4' },
-    knowledgeBase: { status: 'online', label: '知识库', detail: '智普知识库 / franchise-brand-kb' },
+    knowledgeBase: { status: 'online', label: '知识库', detail: '智谱知识库 / franchise-brand-kb' },
     crm: { status: 'warning', label: 'CRM系统', detail: '有赞 CRM / 待授权' },
-    skillCenter: { status: 'online', label: 'Skill中心', detail: '默认加载 樊文花 Skill' },
+    skillCenter: { status: 'online', label: 'Skill中心', detail: '已加载 樊文花Skill' },
   });
 
   const checkStatuses = useCallback(async () => {
@@ -72,15 +72,15 @@ export default function SystemStatusPanel() {
           ...prev.skillCenter,
           status: 'online',
           detail: totalCount > 0
-            ? `默认加载 樊文花 Skill · 联调通道 ${readyCount}/${totalCount}`
-            : '默认加载 樊文花 Skill',
+            ? `已加载 樊文花Skill · 联调通道 ${readyCount}/${totalCount}`
+            : '已加载 樊文花Skill',
         },
       }));
     } catch {
       setStatuses((prev) => ({
         ...prev,
         aiModel: { ...prev.aiModel, status: 'warning', detail: 'OPENAI / gpt-5.4' },
-        knowledgeBase: { ...prev.knowledgeBase, status: 'online', detail: '智普知识库 / franchise-brand-kb' },
+        knowledgeBase: { ...prev.knowledgeBase, status: 'online', detail: '智谱知识库 / franchise-brand-kb' },
         crm: { ...prev.crm, status: 'warning', detail: '有赞 CRM / 待授权' },
       }));
     }

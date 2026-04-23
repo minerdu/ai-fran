@@ -94,7 +94,7 @@ export default function AiPage() {
         </div>
 
         <div 
-          onClick={() => router.push('/me?tab=report')}
+          onClick={() => router.push('/settings/report')}
           style={{ background: '#fff', borderRadius: '12px', padding: '20px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6', transition: 'all 0.2s' }}
           onMouseOver={(e) => e.currentTarget.style.borderColor = '#8b5cf6'}
           onMouseOut={(e) => e.currentTarget.style.borderColor = '#f3f4f6'}

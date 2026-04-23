@@ -6,9 +6,14 @@
 # 运行命令: docker run -p 3000:3000 --env-file .env ai-franchise-app
 # =============================================================
 
-# ── Stage 1: 安装依赖 ──
-FROM node:20-alpine AS deps
+# ── Base: 统一运行时与 npm 版本 ──
+FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
+RUN npm install -g npm@11.13.0
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+
+# ── Stage 1: 安装依赖 ──
+FROM base AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -16,8 +21,7 @@ COPY prisma ./prisma/
 RUN npm ci
 
 # ── Stage 2: 构建应用 ──
-FROM node:20-alpine AS builder
-RUN apk add --no-cache libc6-compat openssl
+FROM base AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -30,8 +34,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # ── Stage 3: 生产运行 ──
-FROM node:20-alpine AS runner
-RUN apk add --no-cache libc6-compat openssl
+FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
