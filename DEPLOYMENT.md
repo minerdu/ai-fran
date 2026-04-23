@@ -13,26 +13,9 @@
 
 - Docker Engine
 - Docker Compose Plugin
-- PostgreSQL 15+
 - Nginx
 
-## 1. 准备数据库
-
-在服务器上执行：
-
-```bash
-cd /opt/ai-fran
-DB_PASSWORD='change-me' APP_USER=ubuntu ./scripts/server-setup.sh
-```
-
-脚本会：
-
-- 创建 PostgreSQL 用户和数据库
-- 授权 `public` schema
-- 创建应用目录
-- 校验本地 PostgreSQL 连接
-
-## 2. 准备环境变量
+## 1. 准备环境变量
 
 复制样例文件：
 
@@ -42,19 +25,13 @@ cp .env.production.example .env.production
 
 至少需要填写：
 
-- `DATABASE_URL`
+- `POSTGRES_PASSWORD`
 - `OPENAI_API_KEY`
 - `NEXT_PUBLIC_BASE_URL`
 
-如果 PostgreSQL 部署在宿主机，容器内推荐使用：
+`DATABASE_URL` 默认已经指向 Compose 内置的 PostgreSQL 容器，一般不需要改。
 
-```text
-host.docker.internal
-```
-
-该主机名已在 `docker-compose.prod.yml` 中通过 `host-gateway` 注入。
-
-## 3. 启动应用
+## 2. 启动应用
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
@@ -68,7 +45,7 @@ npx prisma migrate deploy
 
 再启动 Next.js 生产服务。
 
-## 4. 配置 Nginx
+## 3. 配置 Nginx
 
 将仓库内脚本上传到服务器后执行：
 
@@ -81,7 +58,7 @@ sudo bash ./scripts/nginx-setup.sh
 - `/fran/` 代理到 `127.0.0.1:3001`
 - `/` 重定向到 `/fran/`
 
-## 5. 验证
+## 4. 验证
 
 验证容器状态：
 

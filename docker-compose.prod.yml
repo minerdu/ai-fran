@@ -1,4 +1,20 @@
 services:
+  ai-franchise-db:
+    container_name: ai-franchise-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ai_franchise
+      POSTGRES_USER: fran_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - ai_franchise_db:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fran_user -d ai_franchise"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   ai-franchise:
     container_name: ai-franchise-app
     build:
@@ -6,8 +22,14 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env.production
+    depends_on:
+      ai-franchise-db:
+        condition: service_healthy
     ports:
       - "3001:3000"
     restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    environment:
+      DATABASE_URL: postgresql://fran_user:${POSTGRES_PASSWORD:-change-me}@ai-franchise-db:5432/ai_franchise?schema=public
+
+volumes:
+  ai_franchise_db:
