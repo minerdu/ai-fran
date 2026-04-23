@@ -95,6 +95,9 @@ export async function PATCH(request) {
       case 'approve':
         data.approvalStatus = 'approved';
         data.executeStatus = 'scheduled';
+        data.reviewedBy = 'human';
+        data.reviewNotes = updateData?.reviewNotes || '人工审批通过';
+        data.rejectReason = null;
         if (updateData?.content) data.content = updateData.content;
         if (updateData?.scheduledAt) {
           data.scheduledAt = new Date(updateData.scheduledAt);
@@ -105,6 +108,8 @@ export async function PATCH(request) {
       case 'reject':
         data.approvalStatus = 'rejected';
         data.executeStatus = 'cancelled';
+        data.reviewedBy = 'human';
+        data.reviewNotes = updateData?.reviewNotes || updateData?.rejectReason || '人工审批驳回';
         if (updateData?.rejectReason) data.rejectReason = updateData.rejectReason;
         break;
       case 'execute':

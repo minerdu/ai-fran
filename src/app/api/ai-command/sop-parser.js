@@ -26,6 +26,7 @@ export async function parseSopScheduleToTasks(sopSchedule, targetLeads, meta = {
   const steps = sopSchedule || [];
   const tasksCreated = [];
   const now = new Date();
+  const forcedApprovalNote = `命中强制人工审批规则：${meta.intent || 'SOP 任务'} 需人工确认后才能执行。`;
 
   for (const lead of targetLeads) {
     for (let i = 0; i < steps.length; i++) {
@@ -39,33 +40,19 @@ export async function parseSopScheduleToTasks(sopSchedule, targetLeads, meta = {
         data: {
           customerId: lead.id,
           title: step.title || `${meta.intent || 'SOP任务'} - 第${i + 1}步`,
-          taskType: step.action?.type || 'text',
+          taskType: step.action?.type === 'send_material' ? 'asset_bundle' : (step.action?.type || 'text'),
           content: step.content || step.action?.content || '',
           triggerSource: 'manual_command',
           triggerReason: `📋 人工 SOP 编排: "${(meta.command || '').substring(0, 80)}" → 第${i + 1}/${steps.length}步`,
           approvalStatus: 'pending',
           executeStatus: 'draft',
           scheduledAt,
+          reviewedBy: meta.needApproval ? 'ai' : null,
+          reviewNotes: meta.needApproval ? forcedApprovalNote : null,
         },
       });
 
-      // 运行 AI 自动审核
-      try {
-        const reviewResult = await reviewAndUpdateTask(task.id, {
-          batchSize: targetLeads.length,
-        });
-        
-        tasksCreated.push({
-          id: task.id,
-          leadId: lead.id,
-          leadName: lead.name,
-          step: i + 1,
-          scheduledAt: scheduledAt.toISOString(),
-          status: reviewResult.approved ? '已排期' : '待审批',
-          reviewNotes: reviewResult.reason,
-        });
-      } catch (e) {
-        console.error(`[SOP-Parser] Auto-review failed for task ${task.id}:`, e.message);
+      if (meta.needApproval) {
         tasksCreated.push({
           id: task.id,
           leadId: lead.id,
@@ -73,7 +60,35 @@ export async function parseSopScheduleToTasks(sopSchedule, targetLeads, meta = {
           step: i + 1,
           scheduledAt: scheduledAt.toISOString(),
           status: '待审批',
+          reviewNotes: forcedApprovalNote,
         });
+      } else {
+        // 运行 AI 自动审核
+        try {
+          const reviewResult = await reviewAndUpdateTask(task.id, {
+            batchSize: targetLeads.length,
+          });
+          
+          tasksCreated.push({
+            id: task.id,
+            leadId: lead.id,
+            leadName: lead.name,
+            step: i + 1,
+            scheduledAt: scheduledAt.toISOString(),
+            status: reviewResult.approved ? '已排期' : '待审批',
+            reviewNotes: reviewResult.reason,
+          });
+        } catch (e) {
+          console.error(`[SOP-Parser] Auto-review failed for task ${task.id}:`, e.message);
+          tasksCreated.push({
+            id: task.id,
+            leadId: lead.id,
+            leadName: lead.name,
+            step: i + 1,
+            scheduledAt: scheduledAt.toISOString(),
+            status: '待审批',
+          });
+        }
       }
     }
   }

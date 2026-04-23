@@ -82,6 +82,11 @@ function buildCommandCard({
   };
 }
 
+function buildForcedApprovalNote(plan, command) {
+  const actionTitle = plan?.action?.title || plan?.intent || '招商动作';
+  return `命中强制人工审批规则：${actionTitle} 需先进入审批中心。原始指令：${command}`;
+}
+
 async function recordCommandAudit(commandId, command, context, resultType, summary, linked = {}) {
   try {
     await prisma.auditLog.create({
@@ -393,12 +398,14 @@ export async function POST(request) {
           data: {
             customerId: lead.id,
             title: plan.action?.title || '自然语言招商指令任务',
-            taskType: plan.action?.type === 'send_material' ? 'image' : 'text',
+            taskType: plan.action?.type === 'send_material' ? 'asset_bundle' : (plan.action?.type || 'text'),
             content: plan.action?.content || command,
             triggerSource: 'manual_command',
             triggerReason: `📋 人工招商指令: "${command.substring(0, 50)}"`,
             approvalStatus: 'pending', // 先设 pending，由 auto-review 决定
             executeStatus: 'draft',
+            reviewedBy: needApproval ? 'ai' : null,
+            reviewNotes: needApproval ? buildForcedApprovalNote(plan, command) : null,
           },
         });
         tasksCreated.push(task);
@@ -409,7 +416,17 @@ export async function POST(request) {
 
     // 运行 AI 自动审核
     const taskIds = tasksCreated.map(t => t.id);
-    const reviewResult = await batchReview(taskIds);
+    const reviewResult = needApproval
+      ? {
+          approved: [],
+          pending: taskIds,
+          results: taskIds.map((taskId) => ({
+            taskId,
+            approved: false,
+            reason: buildForcedApprovalNote(plan, command),
+          })),
+        }
+      : await batchReview(taskIds);
 
     // 构建返回数据
     const responseTaskDetails = tasksCreated.map((task, i) => {
@@ -420,11 +437,13 @@ export async function POST(request) {
         leadId: lead.id,
         leadName: lead.name,
         status: isApproved ? '已排期（AI自动审核通过）' : '待审批',
-        reviewedBy: 'ai',
+        reviewedBy: isApproved ? 'ai' : (needApproval ? 'human_required' : 'ai'),
       };
     });
 
-    const summaryText = plan.summary || `已为 ${targetLeads.length} 位线索生成招商任务（${reviewResult.approved.length}条自动通过，${reviewResult.pending.length}条待人工审批）。`;
+    const summaryText = needApproval
+      ? `${plan.summary || `已为 ${targetLeads.length} 位线索生成招商任务`}，因涉及敏感动作，已提交审批中心等待人工确认。`
+      : (plan.summary || `已为 ${targetLeads.length} 位线索生成招商任务（${reviewResult.approved.length}条自动通过，${reviewResult.pending.length}条待人工审批）。`);
     const linkedObjects = buildLinkedObjects(targetLeads, reviewResult.pending.length > 0 ? [{
       type: 'approval',
       id: 'pending',

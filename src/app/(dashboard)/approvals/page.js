@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import EmptyState from '@/components/common/EmptyState';
 import FilterChips from '@/components/common/FilterChips';
+import { apiFetch } from '@/lib/basePath';
 import styles from './page.module.css';
 
 const TYPE_META = {
@@ -64,6 +65,20 @@ function isProcessedToday(item) {
   return date.toDateString() === now.toDateString();
 }
 
+async function parseJsonResponse(response, fallbackMessage) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`${fallbackMessage}：服务返回了异常页面`);
+  }
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error || fallbackMessage);
+  }
+
+  return data;
+}
+
 export default function ApprovalsPage() {
   const [items, setItems] = useState([]);
   const [optimizationTasks, setOptimizationTasks] = useState([]);
@@ -75,8 +90,8 @@ export default function ApprovalsPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
 
   const loadApprovals = () => {
-    fetch('/api/approvals', { cache: 'no-store' })
-      .then((response) => response.json())
+    apiFetch('/api/approvals', { cache: 'no-store' })
+      .then((response) => parseJsonResponse(response, '加载审批列表失败'))
       .then((data) => setItems(Array.isArray(data) ? data : []))
       .catch(() => setItems([]));
   };
@@ -97,8 +112,8 @@ export default function ApprovalsPage() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/tasks')
-      .then((res) => res.json())
+    apiFetch('/api/tasks')
+      .then((res) => parseJsonResponse(res, '加载待审批任务失败'))
       .then((tasks) => {
         const next = (Array.isArray(tasks) ? tasks : []).filter((task) =>
           task.approvalStatus === 'pending' &&
@@ -110,7 +125,7 @@ export default function ApprovalsPage() {
   }, [items]);
 
   const handleOptimizationTask = async (taskId, action) => {
-    const response = await fetch('/api/tasks', {
+    const response = await apiFetch('/api/tasks', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: taskId, action }),
@@ -141,7 +156,7 @@ export default function ApprovalsPage() {
   }, [activeFilter, items]);
 
   const handleDecision = async (id, nextStatus, alternative = '') => {
-    const response = await fetch('/api/approvals', {
+    const response = await apiFetch('/api/approvals', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -152,7 +167,7 @@ export default function ApprovalsPage() {
       }),
     });
     if (!response.ok) return;
-    const data = await response.json();
+    const data = await parseJsonResponse(response, '处理审批失败');
     setItems(Array.isArray(data.items) ? data.items : []);
     setExpandedId(null);
     setSelectedAlternative('');
@@ -162,7 +177,7 @@ export default function ApprovalsPage() {
   };
 
   const handleEditDecision = async (id, action) => {
-    const response = await fetch('/api/approvals', {
+    const response = await apiFetch('/api/approvals', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -174,7 +189,7 @@ export default function ApprovalsPage() {
       }),
     });
     if (!response.ok) return;
-    const data = await response.json();
+    const data = await parseJsonResponse(response, '处理审批失败');
     setItems(Array.isArray(data.items) ? data.items : []);
     setExpandedId(null);
     setSelectedAlternative('');
@@ -184,7 +199,7 @@ export default function ApprovalsPage() {
   };
 
   const handleBatchDecision = async (nextStatus) => {
-    const response = await fetch('/api/approvals', {
+    const response = await apiFetch('/api/approvals', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -193,7 +208,7 @@ export default function ApprovalsPage() {
       }),
     });
     if (!response.ok) return;
-    const data = await response.json();
+    const data = await parseJsonResponse(response, '批量处理审批失败');
     setItems(Array.isArray(data.items) ? data.items : []);
     setSelectedIds(new Set());
   };
