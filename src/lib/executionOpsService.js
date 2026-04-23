@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import prisma from './prisma';
 
@@ -32,7 +33,7 @@ export async function ensureExecutionOpsStorage() {
           satisfaction_score REAL DEFAULT 0,
           composite_score REAL DEFAULT 0,
           source TEXT,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
 
@@ -44,7 +45,7 @@ export async function ensureExecutionOpsStorage() {
           to_stage TEXT NOT NULL,
           reason TEXT,
           actor TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
 
@@ -57,8 +58,8 @@ export async function ensureExecutionOpsStorage() {
           status TEXT NOT NULL,
           artifact_ref TEXT,
           payload TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
     })();
@@ -89,11 +90,11 @@ export async function syncLeadOperationalState() {
           satisfactionScore: true,
         },
       }),
-      prisma.$queryRawUnsafe(`
+      prisma.$queryRaw`
         SELECT lead_id, to_stage, created_at
         FROM lead_stage_history
         ORDER BY created_at DESC
-      `),
+      `,
     ]);
 
     const latestStageMap = stageRows.reduce((acc, row) => {
@@ -105,42 +106,42 @@ export async function syncLeadOperationalState() {
 
     for (const customer of customers) {
       const compositeScore = Number((((customer.intentScore || 0) * 0.45) + ((customer.valueScore || 0) * 0.35) + ((customer.satisfactionScore || 0) * 0.2)).toFixed(2));
-      await prisma.$executeRawUnsafe(
-        `
-          INSERT INTO lead_scores (
-            lead_id, intent_score, value_score, satisfaction_score, composite_score, source, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-          ON CONFLICT(lead_id) DO UPDATE SET
-            intent_score = excluded.intent_score,
-            value_score = excluded.value_score,
-            satisfaction_score = excluded.satisfaction_score,
-            composite_score = excluded.composite_score,
-            source = excluded.source,
-            updated_at = CURRENT_TIMESTAMP
-        `,
-        customer.id,
-        customer.intentScore || 0,
-        customer.valueScore || 0,
-        customer.satisfactionScore || 0,
-        compositeScore,
-        'customer_sync'
-      );
+      await prisma.$executeRaw`
+        INSERT INTO lead_scores (
+          lead_id, intent_score, value_score, satisfaction_score, composite_score, source, updated_at
+        ) VALUES (
+          ${customer.id},
+          ${customer.intentScore || 0},
+          ${customer.valueScore || 0},
+          ${customer.satisfactionScore || 0},
+          ${compositeScore},
+          ${'customer_sync'},
+          CURRENT_TIMESTAMP
+        )
+        ON CONFLICT(lead_id) DO UPDATE SET
+          intent_score = excluded.intent_score,
+          value_score = excluded.value_score,
+          satisfaction_score = excluded.satisfaction_score,
+          composite_score = excluded.composite_score,
+          source = excluded.source,
+          updated_at = CURRENT_TIMESTAMP
+      `;
 
       const lastStage = latestStageMap[customer.id] || null;
       if (lastStage !== customer.lifecycleStatus) {
-        await prisma.$executeRawUnsafe(
-          `
-            INSERT INTO lead_stage_history (
-              id, lead_id, from_stage, to_stage, reason, actor, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-          `,
-          `lsh_${randomUUID()}`,
-          customer.id,
-          lastStage,
-          customer.lifecycleStatus,
-          lastStage ? `线索状态从 ${lastStage} 进入 ${customer.lifecycleStatus}` : `初始化线索阶段 ${customer.lifecycleStatus}`,
-          'system'
-        );
+        await prisma.$executeRaw`
+          INSERT INTO lead_stage_history (
+            id, lead_id, from_stage, to_stage, reason, actor, created_at
+          ) VALUES (
+            ${`lsh_${randomUUID()}`},
+            ${customer.id},
+            ${lastStage},
+            ${customer.lifecycleStatus},
+            ${lastStage ? `线索状态从 ${lastStage} 进入 ${customer.lifecycleStatus}` : `初始化线索阶段 ${customer.lifecycleStatus}`},
+            ${'system'},
+            CURRENT_TIMESTAMP
+          )
+        `;
       }
     }
 
@@ -154,7 +155,7 @@ export async function syncLeadOperationalState() {
 
 export async function getLeadScoresMap() {
   await syncLeadOperationalState();
-  const rows = await prisma.$queryRawUnsafe('SELECT * FROM lead_scores');
+  const rows = await prisma.$queryRaw`SELECT * FROM lead_scores`;
   return rows.reduce((acc, row) => {
     acc[row.lead_id] = {
       leadId: row.lead_id,
@@ -171,16 +172,13 @@ export async function getLeadScoresMap() {
 
 export async function getLeadStageHistory(leadId) {
   await syncLeadOperationalState();
-  const rows = await prisma.$queryRawUnsafe(
-    `
-      SELECT *
-      FROM lead_stage_history
-      WHERE lead_id = ?
-      ORDER BY created_at DESC
-      LIMIT 20
-    `,
-    leadId
-  );
+  const rows = await prisma.$queryRaw`
+    SELECT *
+    FROM lead_stage_history
+    WHERE lead_id = ${leadId}
+    ORDER BY created_at DESC
+    LIMIT 20
+  `;
 
   return rows.map((row) => ({
     id: row.id,
@@ -195,66 +193,63 @@ export async function getLeadStageHistory(leadId) {
 
 export async function recordLeadStageChange(leadId, fromStage, toStage, reason, actor = 'human') {
   await ensureExecutionOpsStorage();
-  await prisma.$executeRawUnsafe(
-    `
-      INSERT INTO lead_stage_history (
-        id, lead_id, from_stage, to_stage, reason, actor, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `,
-    `lsh_${randomUUID()}`,
-    leadId,
-    fromStage,
-    toStage,
-    reason,
-    actor
-  );
+  await prisma.$executeRaw`
+    INSERT INTO lead_stage_history (
+      id, lead_id, from_stage, to_stage, reason, actor, created_at
+    ) VALUES (
+      ${`lsh_${randomUUID()}`},
+      ${leadId},
+      ${fromStage},
+      ${toStage},
+      ${reason},
+      ${actor},
+      CURRENT_TIMESTAMP
+    )
+  `;
 }
 
 export async function createDeliveryJob({ entityType, entityId, jobType, status = 'queued', artifactRef = null, payload = null }) {
   await ensureExecutionOpsStorage();
   const id = `job_${randomUUID()}`;
-  await prisma.$executeRawUnsafe(
-    `
-      INSERT INTO delivery_jobs (
-        id, entity_type, entity_id, job_type, status, artifact_ref, payload, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `,
-    id,
-    entityType,
-    entityId,
-    jobType,
-    status,
-    artifactRef,
-    JSON.stringify(payload || {})
-  );
+  await prisma.$executeRaw`
+    INSERT INTO delivery_jobs (
+      id, entity_type, entity_id, job_type, status, artifact_ref, payload, created_at, updated_at
+    ) VALUES (
+      ${id},
+      ${entityType},
+      ${entityId},
+      ${jobType},
+      ${status},
+      ${artifactRef},
+      ${JSON.stringify(payload || {})},
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    )
+  `;
   return { id, entityType, entityId, jobType, status, artifactRef, payload: payload || {} };
 }
 
 export async function listDeliveryJobs({ entityType, entityId } = {}) {
   await ensureExecutionOpsStorage();
   const clauses = [];
-  const values = [];
 
   if (entityType) {
-    clauses.push('entity_type = ?');
-    values.push(entityType);
+    clauses.push(Prisma.sql`entity_type = ${entityType}`);
   }
   if (entityId) {
-    clauses.push('entity_id = ?');
-    values.push(entityId);
+    clauses.push(Prisma.sql`entity_id = ${entityId}`);
   }
 
-  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-  const rows = await prisma.$queryRawUnsafe(
-    `
-      SELECT *
-      FROM delivery_jobs
-      ${where}
-      ORDER BY updated_at DESC, created_at DESC
-      LIMIT 100
-    `,
-    ...values
-  );
+  const whereClause = clauses.length
+    ? Prisma.sql`WHERE ${Prisma.join(clauses, Prisma.sql` AND `)}`
+    : Prisma.empty;
+  const rows = await prisma.$queryRaw`
+    SELECT *
+    FROM delivery_jobs
+    ${whereClause}
+    ORDER BY updated_at DESC, created_at DESC
+    LIMIT 100
+  `;
 
   return rows.map((row) => ({
     id: row.id,

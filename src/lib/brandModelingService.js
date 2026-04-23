@@ -106,8 +106,8 @@ async function ensureBrandStorage() {
           risk_points TEXT,
           missing_context TEXT,
           source_summary TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
 
@@ -124,8 +124,8 @@ async function ensureBrandStorage() {
           source_uri TEXT,
           description TEXT,
           chunk_count INTEGER DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
 
@@ -138,7 +138,7 @@ async function ensureBrandStorage() {
           title TEXT,
           content TEXT NOT NULL,
           token_estimate INTEGER DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
     })();
@@ -163,60 +163,61 @@ export async function createKnowledgeDocument(brandId = DEFAULT_BRAND_ID, payloa
   };
   const chunks = chunkTemplateForDoc(nextDoc);
 
-  await prisma.$executeRawUnsafe(
-    `
-      INSERT INTO knowledge_documents (
-        id, brand_id, name, type, format, size_label, status, source_type, source_uri, description, chunk_count,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT(id) DO UPDATE SET
-        brand_id = excluded.brand_id,
-        name = excluded.name,
-        type = excluded.type,
-        format = excluded.format,
-        size_label = excluded.size_label,
-        status = excluded.status,
-        source_type = excluded.source_type,
-        source_uri = excluded.source_uri,
-        description = excluded.description,
-        chunk_count = excluded.chunk_count,
-        updated_at = CURRENT_TIMESTAMP
-    `,
-    nextDoc.id,
-    brandId,
-    nextDoc.name,
-    nextDoc.type,
-    nextDoc.format,
-    nextDoc.size,
-    nextDoc.status,
-    nextDoc.sourceType,
-    nextDoc.sourceUri,
-    nextDoc.description,
-    chunks.length
-  );
+  await prisma.$executeRaw`
+    INSERT INTO knowledge_documents (
+      id, brand_id, name, type, format, size_label, status, source_type, source_uri, description, chunk_count,
+      created_at, updated_at
+    ) VALUES (
+      ${nextDoc.id},
+      ${brandId},
+      ${nextDoc.name},
+      ${nextDoc.type},
+      ${nextDoc.format},
+      ${nextDoc.size},
+      ${nextDoc.status},
+      ${nextDoc.sourceType},
+      ${nextDoc.sourceUri},
+      ${nextDoc.description},
+      ${chunks.length},
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      brand_id = excluded.brand_id,
+      name = excluded.name,
+      type = excluded.type,
+      format = excluded.format,
+      size_label = excluded.size_label,
+      status = excluded.status,
+      source_type = excluded.source_type,
+      source_uri = excluded.source_uri,
+      description = excluded.description,
+      chunk_count = excluded.chunk_count,
+      updated_at = CURRENT_TIMESTAMP
+  `;
 
   for (const chunk of chunks) {
-    await prisma.$executeRawUnsafe(
-      `
-        INSERT INTO knowledge_chunks (
-          id, document_id, brand_id, chunk_index, title, content, token_estimate, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(id) DO UPDATE SET
-          document_id = excluded.document_id,
-          brand_id = excluded.brand_id,
-          chunk_index = excluded.chunk_index,
-          title = excluded.title,
-          content = excluded.content,
-          token_estimate = excluded.token_estimate
-      `,
-      chunk.id,
-      nextDoc.id,
-      brandId,
-      chunk.chunkIndex,
-      chunk.title,
-      chunk.content,
-      chunk.tokenEstimate
-    );
+    await prisma.$executeRaw`
+      INSERT INTO knowledge_chunks (
+        id, document_id, brand_id, chunk_index, title, content, token_estimate, created_at
+      ) VALUES (
+        ${chunk.id},
+        ${nextDoc.id},
+        ${brandId},
+        ${chunk.chunkIndex},
+        ${chunk.title},
+        ${chunk.content},
+        ${chunk.tokenEstimate},
+        CURRENT_TIMESTAMP
+      )
+      ON CONFLICT(id) DO UPDATE SET
+        document_id = excluded.document_id,
+        brand_id = excluded.brand_id,
+        chunk_index = excluded.chunk_index,
+        title = excluded.title,
+        content = excluded.content,
+        token_estimate = excluded.token_estimate
+    `;
   }
 
   return nextDoc;
@@ -226,44 +227,45 @@ async function seedDefaultBrandData() {
   if (!seedReadyPromise) {
     seedReadyPromise = (async () => {
       await ensureBrandStorage();
-      await prisma.$executeRawUnsafe(
-        `
-          INSERT INTO brands (
-            id, name, website_url, benchmark_company, one_liner, industry, store_models, target_persona,
-            core_selling_points, investment_threshold, enablement_points, risk_points, missing_context, source_summary,
-            created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            website_url = excluded.website_url,
-            benchmark_company = excluded.benchmark_company,
-            one_liner = excluded.one_liner,
-            industry = excluded.industry,
-            store_models = excluded.store_models,
-            target_persona = excluded.target_persona,
-            core_selling_points = excluded.core_selling_points,
-            investment_threshold = excluded.investment_threshold,
-            enablement_points = excluded.enablement_points,
-            risk_points = excluded.risk_points,
-            missing_context = excluded.missing_context,
-            source_summary = excluded.source_summary,
-            updated_at = CURRENT_TIMESTAMP
-        `,
-        DEFAULT_BRAND.id,
-        DEFAULT_BRAND.name,
-        DEFAULT_BRAND.websiteUrl,
-        DEFAULT_BRAND.benchmarkCompany,
-        DEFAULT_BRAND.oneLiner,
-        DEFAULT_BRAND.industry,
-        DEFAULT_BRAND.storeModels,
-        DEFAULT_BRAND.targetPersona,
-        DEFAULT_BRAND.coreSellingPoints,
-        DEFAULT_BRAND.investmentThreshold,
-        DEFAULT_BRAND.enablementPoints,
-        DEFAULT_BRAND.riskPoints,
-        JSON.stringify(DEFAULT_BRAND.missingContext),
-        JSON.stringify(DEFAULT_BRAND.sourceSummary)
-      );
+      await prisma.$executeRaw`
+        INSERT INTO brands (
+          id, name, website_url, benchmark_company, one_liner, industry, store_models, target_persona,
+          core_selling_points, investment_threshold, enablement_points, risk_points, missing_context, source_summary,
+          created_at, updated_at
+        ) VALUES (
+          ${DEFAULT_BRAND.id},
+          ${DEFAULT_BRAND.name},
+          ${DEFAULT_BRAND.websiteUrl},
+          ${DEFAULT_BRAND.benchmarkCompany},
+          ${DEFAULT_BRAND.oneLiner},
+          ${DEFAULT_BRAND.industry},
+          ${DEFAULT_BRAND.storeModels},
+          ${DEFAULT_BRAND.targetPersona},
+          ${DEFAULT_BRAND.coreSellingPoints},
+          ${DEFAULT_BRAND.investmentThreshold},
+          ${DEFAULT_BRAND.enablementPoints},
+          ${DEFAULT_BRAND.riskPoints},
+          ${JSON.stringify(DEFAULT_BRAND.missingContext)},
+          ${JSON.stringify(DEFAULT_BRAND.sourceSummary)},
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+        ON CONFLICT(id) DO UPDATE SET
+          name = excluded.name,
+          website_url = excluded.website_url,
+          benchmark_company = excluded.benchmark_company,
+          one_liner = excluded.one_liner,
+          industry = excluded.industry,
+          store_models = excluded.store_models,
+          target_persona = excluded.target_persona,
+          core_selling_points = excluded.core_selling_points,
+          investment_threshold = excluded.investment_threshold,
+          enablement_points = excluded.enablement_points,
+          risk_points = excluded.risk_points,
+          missing_context = excluded.missing_context,
+          source_summary = excluded.source_summary,
+          updated_at = CURRENT_TIMESTAMP
+      `;
 
       for (const doc of mockFranchiseDocs) {
         await createKnowledgeDocument(DEFAULT_BRAND_ID, {
@@ -288,76 +290,89 @@ async function seedDefaultBrandData() {
 
 export async function getBrandById(brandId = DEFAULT_BRAND_ID) {
   await seedDefaultBrandData();
-  const rows = await prisma.$queryRawUnsafe('SELECT * FROM brands WHERE id = ? LIMIT 1', brandId);
+  const rows = await prisma.$queryRaw`
+    SELECT *
+    FROM brands
+    WHERE id = ${brandId}
+    LIMIT 1
+  `;
   return rows?.[0] ? normalizeBrand(rows[0]) : { ...DEFAULT_BRAND, id: brandId };
 }
 
 export async function listBrands() {
   await seedDefaultBrandData();
-  const rows = await prisma.$queryRawUnsafe('SELECT * FROM brands ORDER BY updated_at DESC');
+  const rows = await prisma.$queryRaw`
+    SELECT *
+    FROM brands
+    ORDER BY updated_at DESC
+  `;
   return rows.map(normalizeBrand);
 }
 
 export async function upsertBrand(payload) {
   await seedDefaultBrandData();
   const brand = { ...DEFAULT_BRAND, ...payload, id: payload.id || DEFAULT_BRAND_ID };
-  await prisma.$executeRawUnsafe(
-    `
-      INSERT INTO brands (
-        id, name, website_url, benchmark_company, one_liner, industry, store_models, target_persona,
-        core_selling_points, investment_threshold, enablement_points, risk_points, missing_context, source_summary,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT(id) DO UPDATE SET
-        name = excluded.name,
-        website_url = excluded.website_url,
-        benchmark_company = excluded.benchmark_company,
-        one_liner = excluded.one_liner,
-        industry = excluded.industry,
-        store_models = excluded.store_models,
-        target_persona = excluded.target_persona,
-        core_selling_points = excluded.core_selling_points,
-        investment_threshold = excluded.investment_threshold,
-        enablement_points = excluded.enablement_points,
-        risk_points = excluded.risk_points,
-        missing_context = excluded.missing_context,
-        source_summary = excluded.source_summary,
-        updated_at = CURRENT_TIMESTAMP
-    `,
-    brand.id,
-    brand.name,
-    brand.websiteUrl,
-    brand.benchmarkCompany,
-    brand.oneLiner,
-    brand.industry,
-    brand.storeModels,
-    brand.targetPersona,
-    brand.coreSellingPoints,
-    brand.investmentThreshold,
-    brand.enablementPoints,
-    brand.riskPoints,
-    JSON.stringify(brand.missingContext || []),
-    JSON.stringify(brand.sourceSummary || [])
-  );
+  await prisma.$executeRaw`
+    INSERT INTO brands (
+      id, name, website_url, benchmark_company, one_liner, industry, store_models, target_persona,
+      core_selling_points, investment_threshold, enablement_points, risk_points, missing_context, source_summary,
+      created_at, updated_at
+    ) VALUES (
+      ${brand.id},
+      ${brand.name},
+      ${brand.websiteUrl},
+      ${brand.benchmarkCompany},
+      ${brand.oneLiner},
+      ${brand.industry},
+      ${brand.storeModels},
+      ${brand.targetPersona},
+      ${brand.coreSellingPoints},
+      ${brand.investmentThreshold},
+      ${brand.enablementPoints},
+      ${brand.riskPoints},
+      ${JSON.stringify(brand.missingContext || [])},
+      ${JSON.stringify(brand.sourceSummary || [])},
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      website_url = excluded.website_url,
+      benchmark_company = excluded.benchmark_company,
+      one_liner = excluded.one_liner,
+      industry = excluded.industry,
+      store_models = excluded.store_models,
+      target_persona = excluded.target_persona,
+      core_selling_points = excluded.core_selling_points,
+      investment_threshold = excluded.investment_threshold,
+      enablement_points = excluded.enablement_points,
+      risk_points = excluded.risk_points,
+      missing_context = excluded.missing_context,
+      source_summary = excluded.source_summary,
+      updated_at = CURRENT_TIMESTAMP
+  `;
 
   return getBrandById(brand.id);
 }
 
 export async function listKnowledgeDocuments(brandId = DEFAULT_BRAND_ID) {
   await seedDefaultBrandData();
-  const rows = await prisma.$queryRawUnsafe(
-    'SELECT * FROM knowledge_documents WHERE brand_id = ? ORDER BY updated_at DESC, created_at DESC',
-    brandId
-  );
+  const rows = await prisma.$queryRaw`
+    SELECT *
+    FROM knowledge_documents
+    WHERE brand_id = ${brandId}
+    ORDER BY updated_at DESC, created_at DESC
+  `;
   return rows.map(normalizeDocument);
 }
 
 export async function getKnowledgeChunkCount(brandId = DEFAULT_BRAND_ID) {
   await seedDefaultBrandData();
-  const rows = await prisma.$queryRawUnsafe(
-    'SELECT COUNT(*) AS count FROM knowledge_chunks WHERE brand_id = ?',
-    brandId
-  );
+  const rows = await prisma.$queryRaw`
+    SELECT COUNT(*) AS count
+    FROM knowledge_chunks
+    WHERE brand_id = ${brandId}
+  `;
   return Number(rows?.[0]?.count || 0);
 }
 

@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import prisma from './prisma';
 
@@ -43,8 +44,8 @@ async function ensureGovernanceStorage() {
           launch_task_id TEXT,
           launch_task_title TEXT,
           launch_href TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
 
@@ -58,7 +59,7 @@ async function ensureGovernanceStorage() {
           operator TEXT,
           reason TEXT,
           metadata TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
     })();
@@ -112,105 +113,99 @@ export async function appendGovernanceAudit({
   metadata = {},
 }) {
   await ensureGovernanceStorage();
-  await prisma.$executeRawUnsafe(
-    `
-      INSERT INTO audit_logs (
-        id, scope, entity_type, entity_id, action, operator, reason, metadata, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `,
-    `audit_${randomUUID()}`,
-    scope,
-    entityType,
-    entityId,
-    action,
-    operator,
-    reason,
-    JSON.stringify(metadata || {})
-  );
+  await prisma.$executeRaw`
+    INSERT INTO audit_logs (
+      id, scope, entity_type, entity_id, action, operator, reason, metadata, created_at
+    ) VALUES (
+      ${`audit_${randomUUID()}`},
+      ${scope},
+      ${entityType},
+      ${entityId},
+      ${action},
+      ${operator},
+      ${reason},
+      ${JSON.stringify(metadata || {})},
+      CURRENT_TIMESTAMP
+    )
+  `;
 }
 
 export async function listGovernanceAuditLogs({ entityType = null, entityId = null, limit = 50 } = {}) {
   await ensureGovernanceStorage();
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 200));
 
   if (entityType && entityId) {
-    const rows = await prisma.$queryRawUnsafe(
-      `
-        SELECT * FROM audit_logs
-        WHERE entity_type = ? AND entity_id = ?
-        ORDER BY created_at DESC
-        LIMIT ?
-      `,
-      entityType,
-      entityId,
-      limit
-    );
+    const rows = await prisma.$queryRaw`
+      SELECT *
+      FROM audit_logs
+      WHERE entity_type = ${entityType} AND entity_id = ${entityId}
+      ORDER BY created_at DESC
+      LIMIT ${safeLimit}
+    `;
     return rows.map(normalizeAuditRow);
   }
 
   if (entityType) {
-    const rows = await prisma.$queryRawUnsafe(
-      `
-        SELECT * FROM audit_logs
-        WHERE entity_type = ?
-        ORDER BY created_at DESC
-        LIMIT ?
-      `,
-      entityType,
-      limit
-    );
+    const rows = await prisma.$queryRaw`
+      SELECT *
+      FROM audit_logs
+      WHERE entity_type = ${entityType}
+      ORDER BY created_at DESC
+      LIMIT ${safeLimit}
+    `;
     return rows.map(normalizeAuditRow);
   }
 
-  const rows = await prisma.$queryRawUnsafe(
-    `
-      SELECT * FROM audit_logs
-      ORDER BY created_at DESC
-      LIMIT ?
-    `,
-    limit
-  );
+  const rows = await prisma.$queryRaw`
+    SELECT *
+    FROM audit_logs
+    ORDER BY created_at DESC
+    LIMIT ${safeLimit}
+  `;
   return rows.map(normalizeAuditRow);
 }
 
 export async function syncOptimizationSuggestions(suggestions = []) {
   await ensureGovernanceStorage();
+  if (!suggestions.length) return [];
 
   for (const item of suggestions) {
-    await prisma.$executeRawUnsafe(
-      `
-        INSERT INTO optimization_suggestions (
-          id, priority, title, owner, expected_impact, reason, next_action, href,
-          status, status_label, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'suggested', '待处理', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ON CONFLICT(id) DO UPDATE SET
-          priority = excluded.priority,
-          title = excluded.title,
-          owner = excluded.owner,
-          expected_impact = excluded.expected_impact,
-          reason = excluded.reason,
-          next_action = excluded.next_action,
-          href = excluded.href,
-          updated_at = CURRENT_TIMESTAMP
-      `,
-      item.id,
-      item.priority || 'P1',
-      item.title,
-      item.owner || '',
-      item.expectedImpact || '',
-      item.reason || '',
-      item.nextAction || '',
-      item.href || ''
-    );
+    await prisma.$executeRaw`
+      INSERT INTO optimization_suggestions (
+        id, priority, title, owner, expected_impact, reason, next_action, href,
+        status, status_label, created_at, updated_at
+      ) VALUES (
+        ${item.id},
+        ${item.priority || 'P1'},
+        ${item.title},
+        ${item.owner || ''},
+        ${item.expectedImpact || ''},
+        ${item.reason || ''},
+        ${item.nextAction || ''},
+        ${item.href || ''},
+        ${'suggested'},
+        ${'待处理'},
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
+      )
+      ON CONFLICT(id) DO UPDATE SET
+        priority = excluded.priority,
+        title = excluded.title,
+        owner = excluded.owner,
+        expected_impact = excluded.expected_impact,
+        reason = excluded.reason,
+        next_action = excluded.next_action,
+        href = excluded.href,
+        updated_at = CURRENT_TIMESTAMP
+    `;
   }
 
-  const rows = await prisma.$queryRawUnsafe(
-    `
-      SELECT * FROM optimization_suggestions
-      WHERE id IN (${suggestions.map(() => '?').join(', ')})
-      ORDER BY created_at ASC
-    `,
-    ...suggestions.map((item) => item.id)
-  );
+  const rows = await prisma.$queryRaw`
+    SELECT *
+    FROM optimization_suggestions
+    WHERE id IN (${Prisma.join(suggestions.map((item) => item.id))})
+    ORDER BY created_at ASC
+  `;
 
   const map = rows.reduce((acc, row) => {
     acc[row.id] = normalizeSuggestionRow(row);
@@ -232,10 +227,12 @@ export async function syncOptimizationSuggestions(suggestions = []) {
 
 export async function getOptimizationSuggestionById(id) {
   await ensureGovernanceStorage();
-  const rows = await prisma.$queryRawUnsafe(
-    'SELECT * FROM optimization_suggestions WHERE id = ? LIMIT 1',
-    id
-  );
+  const rows = await prisma.$queryRaw`
+    SELECT *
+    FROM optimization_suggestions
+    WHERE id = ${id}
+    LIMIT 1
+  `;
   return rows?.[0] ? normalizeSuggestionRow(rows[0]) : null;
 }
 
@@ -250,27 +247,18 @@ export async function updateOptimizationSuggestionRecord(id, {
   const nextStatus = status || 'suggested';
   const nextLabel = deriveStatusLabel(nextStatus);
 
-  await prisma.$executeRawUnsafe(
-    `
-      UPDATE optimization_suggestions
-      SET
-        status = ?,
-        status_label = ?,
-        action_reason = ?,
-        launch_task_id = COALESCE(?, launch_task_id),
-        launch_task_title = COALESCE(?, launch_task_title),
-        launch_href = COALESCE(?, launch_href),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `,
-    nextStatus,
-    nextLabel,
-    reason,
-    launchTaskId,
-    launchTaskTitle,
-    launchHref,
-    id
-  );
+  await prisma.$executeRaw`
+    UPDATE optimization_suggestions
+    SET
+      status = ${nextStatus},
+      status_label = ${nextLabel},
+      action_reason = ${reason},
+      launch_task_id = COALESCE(${launchTaskId}, launch_task_id),
+      launch_task_title = COALESCE(${launchTaskTitle}, launch_task_title),
+      launch_href = COALESCE(${launchHref}, launch_href),
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${id}
+  `;
 
   return getOptimizationSuggestionById(id);
 }
